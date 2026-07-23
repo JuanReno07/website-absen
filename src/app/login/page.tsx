@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Lock, User, Eye, EyeOff, LogIn, AlertCircle, ShieldCheck, Clock } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -64,11 +64,6 @@ export default function LoginPage() {
       setErrorMsg('Gagal terhubung ke server. Periksa koneksi Anda.');
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
   };
 
   return (
@@ -187,38 +182,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Credentials Assistant */}
-          <div className="pt-4 border-t border-slate-800/80 space-y-2">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
-              Pilih Akun Demo Pengujian:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin', 'admin123')}
-                className="p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-brand-500/50 rounded-xl text-left transition-colors group"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-brand-400 group-hover:text-brand-300">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Admin System
-                </div>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">admin / admin123</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('officer1', 'password123')}
-                className="p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-xl text-left transition-colors group"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
-                  <Clock className="w-3.5 h-3.5" />
-                  Anggota Member
-                </div>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">officer1 / password123</p>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer info */}
