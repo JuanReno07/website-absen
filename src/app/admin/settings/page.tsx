@@ -25,7 +25,7 @@ export default function AdminSettingsPage() {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    fetch('/api/auth/me')
+    fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) setUser(data.user);
@@ -78,9 +78,11 @@ export default function AdminSettingsPage() {
       }
 
       setSuccessMsg('Pengaturan branding dan sistem berhasil diperbarui.');
+      window.dispatchEvent(new Event('systemSettingsUpdated'));
+
       setTimeout(() => {
         window.location.reload();
-      }, 1000);
+      }, 800);
     } catch (err) {
       setErrorMsg('Terjadi kesalahan jaringan.');
     } finally {
