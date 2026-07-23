@@ -104,8 +104,18 @@ export default function AdminSettingsPage() {
         return;
       }
 
-      // Safe update local storage
+      // Update local state to reflect the saved logo
+      if (finalLogo) {
+        setCurrentSavedLogo(finalLogo);
+        setLogoBase64(null); // Clear pending upload since it's now saved
+      }
+
+      // Safe update localStorage - clear first to avoid quota issues
       if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('ase_system_logo');
+          localStorage.removeItem('ase_system_name');
+        } catch (e) {}
         try {
           if (finalLogo) localStorage.setItem('ase_system_logo', finalLogo);
           if (systemName) localStorage.setItem('ase_system_name', systemName);

@@ -38,6 +38,9 @@ export default function Navbar({
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const DEFAULT_LOGO = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+  const DEFAULT_NAME = 'ASE Duty System';
+
   // Instant 0ms pre-hydration from localStorage to eliminate old logo flash
   const [currentLogo, setCurrentLogo] = useState<string>(() => {
     if (initialLogoUrl) return initialLogoUrl;
@@ -47,7 +50,7 @@ export default function Navbar({
         if (cachedLogo) return cachedLogo;
       } catch (e) {}
     }
-    return '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+    return DEFAULT_LOGO;
   });
 
   const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
@@ -58,30 +61,35 @@ export default function Navbar({
         if (cachedName) return cachedName;
       } catch (e) {}
     }
-    return 'ASE Duty System';
+    return DEFAULT_NAME;
   });
 
   const loadSettings = () => {
-    fetch(`/api/admin/settings?t=${Date.now()}`, { cache: 'no-store' })
+    fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) {
-          if (data.settings.logo) {
-            setCurrentLogo(data.settings.logo);
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('ase_system_logo', data.settings.logo);
-              } catch (e) {}
+          // Always update logo from database - this is the source of truth
+          const newLogo = data.settings.logo || DEFAULT_LOGO;
+          setCurrentLogo(newLogo);
+          try {
+            // Only cache non-base64 logos in localStorage (base64 can exceed quota)
+            if (!newLogo.startsWith('data:')) {
+              localStorage.setItem('ase_system_logo', newLogo);
+            } else {
+              // For base64 logos, try to cache but silently handle quota errors
+              localStorage.setItem('ase_system_logo', newLogo);
             }
+          } catch (e) {
+            // localStorage quota exceeded - clear old cache to make room
+            try { localStorage.removeItem('ase_system_logo'); } catch (ex) {}
           }
-          if (data.settings.system_name) {
-            setCurrentSystemName(data.settings.system_name);
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('ase_system_name', data.settings.system_name);
-              } catch (e) {}
-            }
-          }
+
+          const newName = data.settings.system_name || DEFAULT_NAME;
+          setCurrentSystemName(newName);
+          try {
+            localStorage.setItem('ase_system_name', newName);
+          } catch (e) {}
         }
       })
       .catch(() => {});
@@ -90,10 +98,24 @@ export default function Navbar({
   useEffect(() => {
     loadSettings();
 
+    // Listen for settings update event (same tab)
     const handleSettingsEvent = () => loadSettings();
     window.addEventListener('systemSettingsUpdated', handleSettingsEvent);
+
+    // Listen for storage changes (cross-tab sync)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ase_system_logo' && e.newValue) {
+        setCurrentLogo(e.newValue);
+      }
+      if (e.key === 'ase_system_name' && e.newValue) {
+        setCurrentSystemName(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       window.removeEventListener('systemSettingsUpdated', handleSettingsEvent);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 

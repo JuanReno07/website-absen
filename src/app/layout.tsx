@@ -5,12 +5,15 @@ import { prisma } from '@/lib/db';
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = 'ASE Duty Attendance System';
-  let logo = '/Logo/TRANSPARENT_ASERP_BLACK_HORIZONTAL.png';
+  let favicon = '/Logo/TRANSPARENT_ASERP_BLACK_HORIZONTAL.png';
 
   try {
     const settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
     if (settings?.system_name) title = settings.system_name;
-    if (settings?.logo) logo = settings.logo;
+    // Only use path-based logos for favicon (base64 data URLs are too large for HTML head)
+    if (settings?.logo && !settings.logo.startsWith('data:')) {
+      favicon = settings.logo;
+    }
   } catch (e) {}
 
   return {
@@ -18,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: 'Sistem Absensi Duty IN & Duty OUT Serba Otomatis untuk ASE Roleplay',
     manifest: '/manifest.json',
     icons: {
-      icon: logo,
+      icon: favicon,
     },
   };
 }
