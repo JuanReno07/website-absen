@@ -27,11 +27,17 @@ export default function MemberLeavePage() {
     try {
       const authRes = await fetch('/api/auth/me');
       const authData = await authRes.json();
-      if (authData.authenticated) setUser(authData.user);
+      if (!authData.authenticated) {
+        window.location.href = '/login';
+        return;
+      }
+      setUser(authData.user);
 
       const res = await fetch('/api/leave');
-      const data = await res.json();
-      if (res.ok) setLeaveRequests(data.leaveRequests || []);
+      if (res.ok) {
+        const data = await res.json();
+        setLeaveRequests(data.leaveRequests || []);
+      }
     } catch (e) {
       console.error(e);
     } finally {

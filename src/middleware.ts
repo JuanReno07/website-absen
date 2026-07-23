@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/request';
 
 const COOKIE_NAME = 'ase_duty_session';
 
@@ -7,8 +7,8 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value;
   const { pathname } = request.nextUrl;
 
-  // Protected routes requiring login
-  const protectedRoutes = ['/dashboard', '/duty-in', '/duty-out', '/history', '/profile', '/admin'];
+  // Protected routes requiring authentication
+  const protectedRoutes = ['/dashboard', '/duty-in', '/duty-out', '/history', '/leave', '/profile', '/admin'];
 
   const isProtected = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -29,5 +29,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/duty-in/:path*', '/duty-out/:path*', '/history/:path*', '/profile/:path*', '/admin/:path*', '/login', '/register'],
+  matcher: ['/dashboard/:path*', '/duty-in/:path*', '/duty-out/:path*', '/history/:path*', '/leave/:path*', '/profile/:path*', '/admin/:path*', '/login', '/register'],
 };
