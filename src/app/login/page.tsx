@@ -12,17 +12,44 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [settings, setSettings] = useState<any>(null);
+
+  // 0ms instant pre-hydration for logo to eliminate initial flash
+  const [currentLogo, setCurrentLogo] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('ase_system_logo');
+      if (cached) return cached;
+    }
+    return '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+  });
+
+  const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('ase_system_name');
+      if (cached) return cached;
+    }
+    return 'ASE Duty Attendance System';
+  });
 
   useEffect(() => {
-    fetch('/api/auth/me')
+    fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) {
           router.push('/dashboard');
         }
         if (data.settings) {
-          setSettings(data.settings);
+          if (data.settings.logo) {
+            setCurrentLogo(data.settings.logo);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('ase_system_logo', data.settings.logo);
+            }
+          }
+          if (data.settings.system_name) {
+            setCurrentSystemName(data.settings.system_name);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('ase_system_name', data.settings.system_name);
+            }
+          }
         }
       })
       .catch(() => {});
@@ -79,11 +106,11 @@ export default function LoginPage() {
             
             <div className="relative p-4 rounded-[22px] bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 border-2 border-slate-300 flex items-center justify-center max-w-[260px]">
               <img
-                src={settings?.logo || '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png'}
+                src={currentLogo}
                 alt="ASE Roleplay Logo"
                 className="w-full h-auto max-h-24 object-contain animate-logo-3d drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/logo.png';
+                  (e.target as HTMLImageElement).src = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
                 }}
               />
             </div>
@@ -91,7 +118,7 @@ export default function LoginPage() {
 
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
-              {settings?.system_name || 'ASE Duty Attendance System'}
+              {currentSystemName}
             </h1>
             <p className="text-xs text-brand-400 font-bold tracking-widest uppercase mt-1">
               ASE ROLEPLAY &bull; ASE GROUP
