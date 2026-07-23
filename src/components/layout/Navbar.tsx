@@ -37,20 +37,43 @@ export default function Navbar({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentLogo, setCurrentLogo] = useState(
-    initialLogoUrl || '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png'
-  );
-  const [currentSystemName, setCurrentSystemName] = useState(
-    initialSystemName || 'ASE Duty System'
-  );
+
+  // Instant 0ms pre-hydration from localStorage to eliminate old logo flash
+  const [currentLogo, setCurrentLogo] = useState<string>(() => {
+    if (initialLogoUrl) return initialLogoUrl;
+    if (typeof window !== 'undefined') {
+      const cachedLogo = localStorage.getItem('ase_system_logo');
+      if (cachedLogo) return cachedLogo;
+    }
+    return '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+  });
+
+  const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
+    if (initialSystemName) return initialSystemName;
+    if (typeof window !== 'undefined') {
+      const cachedName = localStorage.getItem('ase_system_name');
+      if (cachedName) return cachedName;
+    }
+    return 'ASE Duty System';
+  });
 
   const loadSettings = () => {
     fetch(`/api/admin/settings?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) {
-          if (data.settings.logo) setCurrentLogo(data.settings.logo);
-          if (data.settings.system_name) setCurrentSystemName(data.settings.system_name);
+          if (data.settings.logo) {
+            setCurrentLogo(data.settings.logo);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('ase_system_logo', data.settings.logo);
+            }
+          }
+          if (data.settings.system_name) {
+            setCurrentSystemName(data.settings.system_name);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('ase_system_name', data.settings.system_name);
+            }
+          }
         }
       })
       .catch(() => {});
