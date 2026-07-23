@@ -36,9 +36,11 @@ export default function DashboardPage() {
   const [recentHistory, setRecentHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<boolean>(false);
 
   const fetchDashboardData = async () => {
     try {
+      setErrorState(false);
       const authRes = await fetch('/api/auth/me');
       const authData = await authRes.json();
 
@@ -58,8 +60,8 @@ export default function DashboardPage() {
         setRecentHistory(dutyData.recentHistory || []);
       }
     } catch (e) {
-      console.error(e);
-      router.push('/login');
+      console.error('Dashboard fetch error:', e);
+      setErrorState(true);
     } finally {
       setLoading(false);
     }
@@ -71,12 +73,12 @@ export default function DashboardPage() {
     // Fallback timeout in case fetch hangs
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 3000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);
 
-  if (loading && !user) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-3">
@@ -87,8 +89,30 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) {
-    return null;
+  if (errorState || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <AlertTriangle className="w-10 h-10 text-amber-400" />
+          <p className="text-sm text-slate-300 font-semibold">Gagal memuat dashboard</p>
+          <p className="text-xs text-slate-500 max-w-xs">Terjadi kesalahan saat menghubungi server. Periksa koneksi internet Anda.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setLoading(true); fetchDashboardData(); }}
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs rounded-xl transition-all"
+            >
+              Coba Lagi
+            </button>
+            <button
+              onClick={() => router.push('/login')}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-all"
+            >
+              Ke Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
