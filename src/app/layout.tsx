@@ -4,16 +4,21 @@ import ThemeScript from '@/components/ThemeScript';
 import { prisma } from '@/lib/db';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
-  const title = settings?.system_name || 'ASE Duty Attendance System';
-  const description = 'Sistem Absensi Duty IN & Duty OUT Serba Otomatis untuk ASE Roleplay';
+  let title = 'ASE Duty Attendance System';
+  let logo = '/Logo/TRANSPARENT_ASERP_BLACK_HORIZONTAL.png';
+
+  try {
+    const settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
+    if (settings?.system_name) title = settings.system_name;
+    if (settings?.logo) logo = settings.logo;
+  } catch (e) {}
 
   return {
     title,
-    description,
+    description: 'Sistem Absensi Duty IN & Duty OUT Serba Otomatis untuk ASE Roleplay',
     manifest: '/manifest.json',
     icons: {
-      icon: settings?.logo || '/Logo/TRANSPARENT_ASERP_BLACK_HORIZONTAL.png',
+      icon: logo,
     },
   };
 }
@@ -23,7 +28,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
+  let settings = null;
+  try {
+    settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
+  } catch (e) {}
 
   return (
     <html lang="id">
@@ -39,7 +47,11 @@ export default async function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js');
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                      registration.unregister();
+                    }
+                  });
                 });
               }
             `,
