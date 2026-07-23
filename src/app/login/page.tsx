@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Lock, User, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
@@ -177,7 +176,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Show Password & Remember Options */}
+            {/* Show Password Option */}
             <div className="flex items-center justify-between text-xs pt-1">
               <label className="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-slate-300">
                 <input
@@ -188,9 +187,6 @@ export default function LoginPage() {
                 />
                 <span>Tampilkan Password</span>
               </label>
-              <Link href="/register" className="text-brand-400 hover:text-brand-300 font-medium">
-                Belum punya akun?
-              </Link>
             </div>
 
             {/* Submit Button */}
