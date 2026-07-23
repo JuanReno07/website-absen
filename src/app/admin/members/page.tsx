@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import AdminSidebar from '@/components/layout/AdminSidebar';
-import { Users, UserPlus, Edit2, Shield, Search, Filter, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { Users, UserPlus, Edit2, Trash2, Shield, Search, Filter, AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 export default function AdminMembersPage() {
   const [user, setUser] = useState<any>(null);
@@ -31,6 +31,11 @@ export default function AdminMembersPage() {
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Delete State
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -135,6 +140,27 @@ export default function AdminMembersPage() {
       setErrorMsg('Terjadi kesalahan jaringan.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/members?id=${deleteTarget.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Gagal menghapus anggota.');
+        setDeleting(false);
+        return;
+      }
+      setIsDeleteModalOpen(false);
+      setDeleteTarget(null);
+      fetchMembers();
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -265,12 +291,20 @@ export default function AdminMembersPage() {
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleOpenEditModal(m)}
-                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenEditModal(m)}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            onClick={() => { setDeleteTarget(m); setIsDeleteModalOpen(true); }}
+                            className="px-3 py-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-400 hover:text-red-300 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Hapus
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -421,6 +455,54 @@ export default function AdminMembersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative max-w-md w-full bg-slate-900 border border-red-800/50 rounded-3xl overflow-hidden shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div className="w-10 h-10 rounded-full bg-red-950 border border-red-800/50 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-100">Hapus Anggota</h3>
+                <p className="text-xs text-slate-400">Tindakan ini tidak dapat dibatalkan</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-2xl space-y-2">
+              <p className="text-sm text-slate-200">
+                Apakah Anda yakin ingin menghapus anggota berikut?
+              </p>
+              <div className="text-xs space-y-1 text-slate-300">
+                <p><span className="text-slate-500">Discord:</span> <span className="font-bold text-white">{deleteTarget.discord_name}</span></p>
+                <p><span className="text-slate-500">Username:</span> <span className="font-mono">@{deleteTarget.username}</span></p>
+                <p><span className="text-slate-500">Steam Hex:</span> <span className="font-mono">{deleteTarget.steam_hex}</span></p>
+              </div>
+              <p className="text-[11px] text-red-400 font-semibold mt-2">
+                ⚠️ Semua data absensi, riwayat duty, dan pengajuan izin anggota ini akan ikut terhapus secara permanen.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => { setIsDeleteModalOpen(false); setDeleteTarget(null); }}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-600/30 text-xs flex items-center gap-2 disabled:opacity-50 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {deleting ? 'Menghapus...' : 'Ya, Hapus Permanen'}
+              </button>
+            </div>
           </div>
         </div>
       )}

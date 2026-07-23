@@ -164,3 +164,54 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+
+// DELETE member
+export async function DELETE(request: Request) {
+  try {
+    const admin = await requireAdmin();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID anggota wajib disertakan.' }, { status: 400 });
+    }
+
+    // Prevent admin from deleting themselves
+    if (id === admin.id) {
+      return NextResponse.json({ error: 'Anda tidak dapat menghapus akun Anda sendiri.' }, { status: 400 });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return NextResponse.json({ error: 'Anggota tidak ditemukan.' }, { status: 404 });
+    }
+
+    // Delete related audit logs first (no cascade on this relation)
+    await prisma.auditLog.deleteMany({ where: { admin_id: id } });
+
+    // Delete the user (attendances and leave_requests cascade automatically)
+    await prisma.user.delete({ where: { id } });
+
+    // Record Audit Log for this deletion
+    await prisma.auditLog.create({
+      data: {
+        admin_id: admin.id,
+        action: 'DELETE_MEMBER',
+        table_name: 'users',
+        record_id: id,
+        old_data: JSON.stringify({
+          username: existingUser.username,
+          discord_name: existingUser.discord_name,
+          ooc_name: existingUser.ooc_name,
+          steam_hex: existingUser.steam_hex,
+          role: existingUser.role,
+        }),
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Admin DELETE member error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
