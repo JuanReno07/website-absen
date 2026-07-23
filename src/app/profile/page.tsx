@@ -17,9 +17,13 @@ export default function ProfilePage() {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    fetch('/api/auth/me')
+    fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
+        if (!data.authenticated) {
+          window.location.href = '/login';
+          return;
+        }
         if (data.user) {
           setUser(data.user);
           setDiscordName(data.user.discord_name || '');
