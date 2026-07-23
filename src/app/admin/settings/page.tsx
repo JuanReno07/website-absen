@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import ClipboardUploadArea from '@/components/duty/ClipboardUploadArea';
-import { Palette, Save, CheckCircle2, AlertCircle, RefreshCw, Image as ImageIcon, Shield } from 'lucide-react';
+import { compressImage } from '@/lib/imageUtils';
+import { Palette, Save, CheckCircle2, AlertCircle, RefreshCw, Image as ImageIcon, Shield, RotateCcw } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [user, setUser] = useState<any>(null);
@@ -17,6 +18,9 @@ export default function AdminSettingsPage() {
   const [requireDutyInScreenshot, setRequireDutyInScreenshot] = useState(true);
   const [requireDutyOutScreenshot, setRequireDutyOutScreenshot] = useState(true);
   const [systemActive, setSystemActive] = useState(true);
+
+  // Logo handling
+  const [currentSavedLogo, setCurrentSavedLogo] = useState<string>('/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png');
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -31,20 +35,41 @@ export default function AdminSettingsPage() {
         if (data.authenticated) setUser(data.user);
         if (data.settings) {
           const s = data.settings;
-          setCompanyName(s.company_name);
-          setSystemName(s.system_name);
+          setCompanyName(s.company_name || 'ASE GROUP');
+          setSystemName(s.system_name || 'ASE Duty Attendance System');
+          if (s.logo) setCurrentSavedLogo(s.logo);
           setPrimaryColor(s.primary_color || '#DC2626');
           setSecondaryColor(s.secondary_color || '#1E293B');
           setAccentColor(s.accent_color || '#EF4444');
           setThemeMode(s.theme_mode || 'BRANDED');
-          setRequireDutyInScreenshot(s.require_duty_in_screenshot);
-          setRequireDutyOutScreenshot(s.require_duty_out_screenshot);
-          setSystemActive(s.system_active);
+          setRequireDutyInScreenshot(s.require_duty_in_screenshot ?? true);
+          setRequireDutyOutScreenshot(s.require_duty_out_screenshot ?? true);
+          setSystemActive(s.system_active ?? true);
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const handleLogoUpload = async (rawImg: string | null) => {
+    if (!rawImg) {
+      setLogoBase64(null);
+      return;
+    }
+    // Compress image to lightweight max 600px canvas to guarantee <100KB payload & fast loads
+    try {
+      const compressed = await compressImage(rawImg, 600, 600, 0.85);
+      setLogoBase64(compressed);
+    } catch (e) {
+      setLogoBase64(rawImg);
+    }
+  };
+
+  const handleResetLogo = () => {
+    const defaultLogo = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+    setLogoBase64(defaultLogo);
+    setCurrentSavedLogo(defaultLogo);
+  };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +78,8 @@ export default function AdminSettingsPage() {
     setSaving(true);
 
     try {
+      const finalLogo = logoBase64 || currentSavedLogo;
+
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -66,7 +93,7 @@ export default function AdminSettingsPage() {
           require_duty_in_screenshot: requireDutyInScreenshot,
           require_duty_out_screenshot: requireDutyOutScreenshot,
           system_active: systemActive,
-          logo_base64: logoBase64,
+          logo_base64: finalLogo,
         }),
       });
 
@@ -77,12 +104,22 @@ export default function AdminSettingsPage() {
         return;
       }
 
-      setSuccessMsg('Pengaturan branding dan sistem berhasil diperbarui.');
+      // Safe update local storage
+      if (typeof window !== 'undefined') {
+        try {
+          if (finalLogo) localStorage.setItem('ase_system_logo', finalLogo);
+          if (systemName) localStorage.setItem('ase_system_name', systemName);
+        } catch (e) {
+          console.error('LocalStorage quota error ignored:', e);
+        }
+      }
+
+      setSuccessMsg('Pengaturan branding dan logo sistem berhasil disimpan!');
       window.dispatchEvent(new Event('systemSettingsUpdated'));
 
       setTimeout(() => {
         window.location.reload();
-      }, 800);
+      }, 700);
     } catch (err) {
       setErrorMsg('Terjadi kesalahan jaringan.');
     } finally {
@@ -112,7 +149,7 @@ export default function AdminSettingsPage() {
               Pengaturan Branding & Tema Perusahaan
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Sesuaikan nama perusahaan, logo, skema warna, tema, dan aturan absensi.
+              Sesuaikan nama perusahaan, logo aktif di semua menu, skema warna, tema, dan aturan absensi.
             </p>
           </div>
 
@@ -132,6 +169,47 @@ export default function AdminSettingsPage() {
             )}
 
             <form onSubmit={handleSaveSettings} className="space-y-6">
+              {/* Active Current Logo Showcase */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-brand-400" />
+                    Logo Utama Aktif (Akan Muncul di Seluruh Menu)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetLogo}
+                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-semibold transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset Logo Default
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4 pt-1">
+                  <div className="relative p-[2px] rounded-2xl bg-gradient-to-r from-red-600 via-amber-400 to-red-600 shadow-xl overflow-hidden">
+                    <div className="relative h-16 w-auto flex items-center justify-center p-2 rounded-[14px] bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 border border-slate-300">
+                      <img
+                        src={logoBase64 || currentSavedLogo}
+                        alt="Logo Aktif Perusahaan"
+                        className="h-full w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-200">
+                      {logoBase64 ? '⚡ Logo Baru Siap Disimpan' : 'Logo Aktif Saat Ini'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Logo ini ditampilkan di Navbar header, Halaman Login, dan seluruh Panel Admin/Member.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Company Identity */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -285,10 +363,10 @@ export default function AdminSettingsPage() {
               {/* Logo Image Upload */}
               <div className="pt-4 border-t border-slate-800 space-y-2">
                 <label className="block text-xs font-bold text-slate-300 uppercase">
-                  Logo Perusahaan Baru (Opsional)
+                  Unggah / Replace Logo Perusahaan Baru (Opsional)
                 </label>
                 <ClipboardUploadArea
-                  onImageSelected={(img) => setLogoBase64(img)}
+                  onImageSelected={handleLogoUpload}
                   label="Upload Berkas Logo Baru"
                   required={false}
                 />

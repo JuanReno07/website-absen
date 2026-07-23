@@ -15,16 +15,20 @@ export default function LoginPage() {
   // 0ms instant pre-hydration for logo to eliminate initial flash
   const [currentLogo, setCurrentLogo] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('ase_system_logo');
-      if (cached) return cached;
+      try {
+        const cached = localStorage.getItem('ase_system_logo');
+        if (cached) return cached;
+      } catch (e) {}
     }
     return '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
   });
 
   const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('ase_system_name');
-      if (cached) return cached;
+      try {
+        const cached = localStorage.getItem('ase_system_name');
+        if (cached) return cached;
+      } catch (e) {}
     }
     return 'ASE Duty Attendance System';
   });
@@ -40,13 +44,17 @@ export default function LoginPage() {
           if (data.settings.logo) {
             setCurrentLogo(data.settings.logo);
             if (typeof window !== 'undefined') {
-              localStorage.setItem('ase_system_logo', data.settings.logo);
+              try {
+                localStorage.setItem('ase_system_logo', data.settings.logo);
+              } catch (e) {}
             }
           }
           if (data.settings.system_name) {
             setCurrentSystemName(data.settings.system_name);
             if (typeof window !== 'undefined') {
-              localStorage.setItem('ase_system_name', data.settings.system_name);
+              try {
+                localStorage.setItem('ase_system_name', data.settings.system_name);
+              } catch (e) {}
             }
           }
         }

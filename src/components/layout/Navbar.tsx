@@ -42,8 +42,10 @@ export default function Navbar({
   const [currentLogo, setCurrentLogo] = useState<string>(() => {
     if (initialLogoUrl) return initialLogoUrl;
     if (typeof window !== 'undefined') {
-      const cachedLogo = localStorage.getItem('ase_system_logo');
-      if (cachedLogo) return cachedLogo;
+      try {
+        const cachedLogo = localStorage.getItem('ase_system_logo');
+        if (cachedLogo) return cachedLogo;
+      } catch (e) {}
     }
     return '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
   });
@@ -51,8 +53,10 @@ export default function Navbar({
   const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
     if (initialSystemName) return initialSystemName;
     if (typeof window !== 'undefined') {
-      const cachedName = localStorage.getItem('ase_system_name');
-      if (cachedName) return cachedName;
+      try {
+        const cachedName = localStorage.getItem('ase_system_name');
+        if (cachedName) return cachedName;
+      } catch (e) {}
     }
     return 'ASE Duty System';
   });
@@ -65,13 +69,17 @@ export default function Navbar({
           if (data.settings.logo) {
             setCurrentLogo(data.settings.logo);
             if (typeof window !== 'undefined') {
-              localStorage.setItem('ase_system_logo', data.settings.logo);
+              try {
+                localStorage.setItem('ase_system_logo', data.settings.logo);
+              } catch (e) {}
             }
           }
           if (data.settings.system_name) {
             setCurrentSystemName(data.settings.system_name);
             if (typeof window !== 'undefined') {
-              localStorage.setItem('ase_system_name', data.settings.system_name);
+              try {
+                localStorage.setItem('ase_system_name', data.settings.system_name);
+              } catch (e) {}
             }
           }
         }
