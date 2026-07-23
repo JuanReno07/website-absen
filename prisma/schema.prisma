@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String       @id @default(cuid())
+  username      String       @unique
+  password_hash String
+  discord_name  String
+  position_id   String
+  position      Position     @relation(fields: [position_id], references: [id])
+  ooc_name      String
+  steam_hex     String       @unique
+  avatar        String?
+  role          String       @default("MEMBER") // ADMIN, MEMBER
+  is_active     Boolean      @default(true)
+  last_login_at DateTime?
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+
+  attendances   Attendance[]
+  leave_requests LeaveRequest[]
+  audit_logs    AuditLog[]   @relation("AdminLogs")
+
+  @@index([position_id])
+  @@index([steam_hex])
+}
+
+model Position {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  users User[]
+}
+
+model Attendance {
+  id                   String    @id @default(cuid())
+  user_id              String
+  user                 User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  duty_in_time         DateTime
+  duty_out_time        DateTime?
+  duration_minutes     Int?
+  duty_in_screenshot   String
+  duty_out_screenshot  String?
+  status               String    @default("SEDANG_DUTY") // BELUM_DUTY, SEDANG_DUTY, DUTY_SELESAI, PERLU_PEMERIKSAAN, DIBATALKAN_ADMIN
+  user_note            String?
+  admin_note           String?
+  reviewed_by          String?
+  reviewed_at          DateTime?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  deleted_at           DateTime?
+
+  @@index([user_id])
+  @@index([status])
+  @@index([duty_in_time])
+}
+
+model LeaveRequest {
+  id          String    @id @default(cuid())
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  leave_type  String    // Sakit, Halangan OOC, Cuti Kerja, Keperluan Keluarga, Lainnya
+  start_date  DateTime
+  end_date    DateTime
+  reason      String
+  attachment  String?
+  status      String    @default("MENUNGGU_PERSETUJUAN") // MENUNGGU_PERSETUJUAN, DISETUJUI, DITOLAK
+  admin_note  String?
+  approved_by String?
+  approved_at DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([status])
+}
+
+model SystemSettings {
+  id                           String   @id @default("default")
+  company_name                 String   @default("ASE GROUP")
+  system_name                  String   @default("ASE Duty Attendance System")
+  logo                         String   @default("/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png")
+  favicon                      String   @default("/favicon.ico")
+  login_background             String   @default("")
+  dashboard_background         String   @default("")
+  primary_color                String   @default("#DC2626")
+  secondary_color              String   @default("#1E293B")
+  accent_color                 String   @default("#EF4444")
+  theme_mode                   String   @default("BRANDED") // BRANDED, DARK, LIGHT
+  require_duty_in_screenshot   Boolean  @default(true)
+  require_duty_out_screenshot  Boolean  @default(true)
+  max_upload_size_mb           Int      @default(10)
+  timezone                     String   @default("Asia/Jakarta")
+  system_active                Boolean  @default(true)
+  updated_at                   DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  admin_id   String
+  admin      User     @relation("AdminLogs", fields: [admin_id], references: [id])
+  action     String
+  table_name String
+  record_id  String
+  old_data   String?
+  new_data   String?
+  ip_address String?
+  user_agent String?
+  created_at DateTime @default(now())
+
+  @@index([admin_id])
+}
