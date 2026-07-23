@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { saveScreenshotFile } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -52,9 +51,9 @@ export async function PUT(request: Request) {
     if (require_duty_out_screenshot !== undefined) updateData.require_duty_out_screenshot = require_duty_out_screenshot;
     if (system_active !== undefined) updateData.system_active = system_active;
 
+    // Directly store Data URL for 100% Vercel & Cloud serverless image persistence
     if (logo_base64) {
-      const savedLogoPath = await saveScreenshotFile(logo_base64, 'brand', 'duty-in');
-      updateData.logo = savedLogoPath;
+      updateData.logo = logo_base64;
     }
 
     const updated = await prisma.systemSettings.upsert({

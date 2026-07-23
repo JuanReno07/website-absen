@@ -44,7 +44,7 @@ export default function Navbar({
     initialSystemName || 'ASE Duty System'
   );
 
-  useEffect(() => {
+  const loadSettings = () => {
     fetch(`/api/admin/settings?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
@@ -54,6 +54,16 @@ export default function Navbar({
         }
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadSettings();
+
+    const handleSettingsEvent = () => loadSettings();
+    window.addEventListener('systemSettingsUpdated', handleSettingsEvent);
+    return () => {
+      window.removeEventListener('systemSettingsUpdated', handleSettingsEvent);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -94,7 +104,7 @@ export default function Navbar({
                   alt="Logo Perusahaan"
                   className="h-full w-auto object-contain animate-logo-3d drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/logo.png';
+                    (e.target as HTMLImageElement).src = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
                   }}
                 />
               </div>
