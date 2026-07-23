@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import type { NextRequest } from 'next/server';
 
 const COOKIE_NAME = 'ase_duty_session';
 
@@ -29,5 +29,22 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/duty-in/:path*', '/duty-out/:path*', '/history/:path*', '/leave/:path*', '/profile/:path*', '/admin/:path*', '/login', '/register'],
+  matcher: [
+    '/dashboard',
+    '/dashboard/:path*',
+    '/duty-in',
+    '/duty-in/:path*',
+    '/duty-out',
+    '/duty-out/:path*',
+    '/history',
+    '/history/:path*',
+    '/leave',
+    '/leave/:path*',
+    '/profile',
+    '/profile/:path*',
+    '/admin',
+    '/admin/:path*',
+    '/login',
+    '/register',
+  ],
 };
