@@ -8,7 +8,10 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { authenticated: false, activeDuty: null, todayTotalMinutes: 0, monthTotalMinutes: 0, recentHistory: [] },
+        { status: 200 }
+      );
     }
 
     const activeDuty = await prisma.attendance.findFirst({
@@ -50,6 +53,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
+      authenticated: true,
       activeDuty,
       serverTime: now.toISOString(),
       todayTotalMinutes: todayDuties._sum.duration_minutes || 0,

@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json(
         { error: 'Akun tidak ditemukan. Periksa kembali username Anda.' },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Password yang Anda masukkan salah.' },
-        { status: 401 }
+        { status: 400 }
       );
     }
 
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         discord_name: user.discord_name,
         ooc_name: user.ooc_name,
         steam_hex: user.steam_hex,
-        position_name: user.position.name,
+        position_name: user.position?.name || 'Anggota',
       },
     });
 
