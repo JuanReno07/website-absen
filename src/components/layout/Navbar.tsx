@@ -45,7 +45,7 @@ export default function Navbar({
   );
 
   useEffect(() => {
-    fetch('/api/admin/settings')
+    fetch(`/api/admin/settings?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.settings) {
