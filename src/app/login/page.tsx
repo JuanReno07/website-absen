@@ -12,6 +12,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const DEFAULT_LOGO = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+
   // 0ms instant pre-hydration for logo to eliminate initial flash
   const [currentLogo, setCurrentLogo] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -20,7 +22,7 @@ export default function LoginPage() {
         if (cached) return cached;
       } catch (e) {}
     }
-    return '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
+    return DEFAULT_LOGO;
   });
 
   const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
@@ -41,22 +43,21 @@ export default function LoginPage() {
           router.push('/dashboard');
         }
         if (data.settings) {
-          if (data.settings.logo) {
-            setCurrentLogo(data.settings.logo);
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('ase_system_logo', data.settings.logo);
-              } catch (e) {}
-            }
+          // Always update logo from database - this is the source of truth
+          const newLogo = data.settings.logo || DEFAULT_LOGO;
+          setCurrentLogo(newLogo);
+          try {
+            localStorage.removeItem('ase_system_logo');
+            localStorage.setItem('ase_system_logo', newLogo);
+          } catch (e) {
+            try { localStorage.removeItem('ase_system_logo'); } catch (ex) {}
           }
-          if (data.settings.system_name) {
-            setCurrentSystemName(data.settings.system_name);
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('ase_system_name', data.settings.system_name);
-              } catch (e) {}
-            }
-          }
+
+          const newName = data.settings.system_name || 'ASE Duty Attendance System';
+          setCurrentSystemName(newName);
+          try {
+            localStorage.setItem('ase_system_name', newName);
+          } catch (e) {}
         }
       })
       .catch(() => {});
