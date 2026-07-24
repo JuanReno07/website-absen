@@ -45,7 +45,7 @@ export default function DashboardPage() {
       const authData = await authRes.json();
 
       if (!authData || !authData.authenticated) {
-        router.push('/login');
+        window.location.href = '/login';
         return;
       }
       setUser(authData.user);
@@ -89,7 +89,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (errorState || !user) {
+  if (errorState) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -104,7 +104,7 @@ export default function DashboardPage() {
               Coba Lagi
             </button>
             <button
-              onClick={() => router.push('/login')}
+              onClick={() => { window.location.href = '/login'; }}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-all"
             >
               Ke Login
@@ -113,6 +113,10 @@ export default function DashboardPage() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
