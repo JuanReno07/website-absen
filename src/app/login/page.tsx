@@ -80,6 +80,12 @@ export default function LoginPage() {
         return;
       }
 
+      if (typeof window !== 'undefined' && data.user) {
+        try {
+          localStorage.setItem('ase_user_session', JSON.stringify(data.user));
+        } catch (e) {}
+      }
+
       router.push('/dashboard');
     } catch (err) {
       setErrorMsg('Terjadi kesalahan koneksi ke server.');
