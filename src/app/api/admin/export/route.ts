@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     await requireAdmin();
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'excel'; // 'excel' or 'csv'
+    const period = searchParams.get('period') || 'all';
     const position_id = searchParams.get('position_id') || '';
     const status = searchParams.get('status') || '';
     const startDateParam = searchParams.get('startDate');
@@ -16,11 +17,31 @@ export async function GET(request: Request) {
     const where: any = {};
     if (status && status !== 'ALL') where.status = status;
     if (position_id && position_id !== 'ALL') where.user = { position_id };
-    if (startDateParam && endDateParam) {
+
+    const now = new Date();
+    let periodLabel = 'Semua Waktu';
+
+    if (period === 'today') {
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      where.duty_in_time = { gte: startOfToday };
+      periodLabel = 'Hari Ini';
+    } else if (period === 'week') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diff);
+      startOfWeek.setHours(0, 0, 0, 0);
+      where.duty_in_time = { gte: startOfWeek };
+      periodLabel = 'Minggu Ini';
+    } else if (period === 'month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      where.duty_in_time = { gte: startOfMonth };
+      periodLabel = 'Bulan Ini';
+    } else if (period === 'custom' && startDateParam && endDateParam) {
       where.duty_in_time = {
         gte: new Date(startDateParam),
         lte: new Date(endDateParam + 'T23:59:59'),
       };
+      periodLabel = `${startDateParam} s/d ${endDateParam}`;
     }
 
     const attendances = await prisma.attendance.findMany({
@@ -55,7 +76,7 @@ export async function GET(request: Request) {
         }
       });
 
-      const csvHeader = 'No,Nama Discord,Jabatan,Nama OOC,Steam Hex,Waktu IN,Waktu OUT,Durasi Sesi (Menit),Total Harian (Menit),Target 3 Jam,Status\n';
+      const csvHeader = `Periode: ${periodLabel}\nNo,Nama Discord,Jabatan,Nama OOC,Steam Hex,Waktu IN,Waktu OUT,Durasi Sesi (Menit),Total Harian (Menit),Target 3 Jam,Status\n`;
       const csvRows = exportRecords
         .map((r, idx) => {
           const dateStr = new Date(r.duty_in_time).toISOString().slice(0, 10);
@@ -69,18 +90,18 @@ export async function GET(request: Request) {
       return new Response(csvHeader + csvRows, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="Laporan_Duty_ASE_${new Date().toISOString().slice(0, 10)}.csv"`,
+          'Content-Disposition': `attachment; filename="Laporan_Duty_ASE_${period}_${new Date().toISOString().slice(0, 10)}.csv"`,
         },
       });
     }
 
-    const excelBuffer = await generateAttendanceExcel(exportRecords);
+    const excelBuffer = await generateAttendanceExcel(exportRecords, periodLabel);
     const uint8Array = new Uint8Array(excelBuffer);
 
     return new Response(uint8Array, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="Laporan_Duty_ASE_${new Date().toISOString().slice(0, 10)}.xlsx"`,
+        'Content-Disposition': `attachment; filename="Laporan_Duty_ASE_${period}_${new Date().toISOString().slice(0, 10)}.xlsx"`,
       },
     });
   } catch (error: any) {

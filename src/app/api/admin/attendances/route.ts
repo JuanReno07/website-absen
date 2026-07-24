@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     const position_id = searchParams.get('position_id') || '';
+    const period = searchParams.get('period') || 'all';
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
 
@@ -38,7 +39,20 @@ export async function GET(request: Request) {
       };
     }
 
-    if (startDateParam && endDateParam) {
+    const now = new Date();
+    if (period === 'today') {
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      where.duty_in_time = { gte: startOfToday };
+    } else if (period === 'week') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diff);
+      startOfWeek.setHours(0, 0, 0, 0);
+      where.duty_in_time = { gte: startOfWeek };
+    } else if (period === 'month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      where.duty_in_time = { gte: startOfMonth };
+    } else if (period === 'custom' && startDateParam && endDateParam) {
       where.duty_in_time = {
         gte: new Date(startDateParam),
         lte: new Date(endDateParam + 'T23:59:59'),
@@ -56,7 +70,6 @@ export async function GET(request: Request) {
     });
 
     // Real-time duty stats summary for Dashboard Admin
-    const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 

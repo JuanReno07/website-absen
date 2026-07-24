@@ -20,6 +20,7 @@ export default function AdminRecapPage() {
   const [user, setUser] = useState<any>(null);
   const [attendances, setAttendances] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,7 @@ export default function AdminRecapPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      params.append('period', periodFilter);
       if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
 
@@ -56,7 +58,7 @@ export default function AdminRecapPage() {
 
   useEffect(() => {
     fetchRecapData();
-  }, [positionFilter, statusFilter]);
+  }, [periodFilter, positionFilter, statusFilter]);
 
   // Aggregate math
   const completedDuties = attendances.filter((a) => a.status === 'DUTY_SELESAI');
@@ -94,10 +96,17 @@ export default function AdminRecapPage() {
   const memberLeaderboard = Object.values(memberMap).sort((a, b) => b.totalMin - a.totalMin);
 
   const handleExport = (format: 'excel' | 'csv') => {
-    const params = new URLSearchParams({ format });
+    const params = new URLSearchParams({ format, period: periodFilter });
     if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
     if (statusFilter !== 'ALL') params.append('status', statusFilter);
     window.open(`/api/admin/export?${params.toString()}`, '_blank');
+  };
+
+  const periodLabels = {
+    today: 'Hari Ini',
+    week: 'Minggu Ini',
+    month: 'Bulan Ini',
+    all: 'Semua Waktu',
   };
 
   return (
@@ -139,6 +148,37 @@ export default function AdminRecapPage() {
             </div>
           </div>
 
+          {/* Period Filter Selector & Controls */}
+          <div className="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-800">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-brand-400" />
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                FILTER PERIODE LAPORAN:
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {[
+                { id: 'today', label: 'Hari Ini' },
+                { id: 'week', label: 'Minggu Ini' },
+                { id: 'month', label: 'Bulan Ini' },
+                { id: 'all', label: 'Semua Waktu' },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setPeriodFilter(p.id as any)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                    periodFilter === p.id
+                      ? 'bg-brand-600 text-white border-brand-500 shadow-md shadow-brand-600/30'
+                      : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Statistical Highlights Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {loading ? (
@@ -156,7 +196,9 @@ export default function AdminRecapPage() {
                   <p className="text-2xl font-extrabold text-brand-400 font-mono">
                     {formatDurationMinutes(totalCompletedMinutes)}
                   </p>
-                  <p className="text-[10px] text-slate-500">Dari {completedDuties.length} sesi duty selesai</p>
+                  <p className="text-[10px] text-slate-500">
+                    Periode {periodLabels[periodFilter]} ({completedDuties.length} sesi selesai)
+                  </p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-5 space-y-1">
@@ -164,7 +206,7 @@ export default function AdminRecapPage() {
                   <p className="text-2xl font-extrabold text-blue-400 font-mono">
                     {formatDurationMinutes(avgMinutes)}
                   </p>
-                  <p className="text-[10px] text-slate-500">Per sesi duty</p>
+                  <p className="text-[10px] text-slate-500">Per sesi duty ({periodLabels[periodFilter]})</p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-5 space-y-1">
@@ -180,7 +222,7 @@ export default function AdminRecapPage() {
                   <p className="text-2xl font-extrabold text-slate-100 font-mono">
                     {totalSessions} Sesi
                   </p>
-                  <p className="text-[10px] text-slate-500">Dalam periode filter saat ini</p>
+                  <p className="text-[10px] text-slate-500">Periode {periodLabels[periodFilter]}</p>
                 </div>
               </>
             )}
@@ -188,11 +230,16 @@ export default function AdminRecapPage() {
 
           {/* Leaderboard Table per Member */}
           <div className="glass-card rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                <Award className="w-5 h-5 text-amber-400" />
-                Peringkat Total Jam Duty Anggota
-              </h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-400" />
+                  Peringkat Total Jam Duty Anggota ({periodLabels[periodFilter]})
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Total jam duty dan evaluasi pencapaian target minimal 3 jam/hari.
+                </p>
+              </div>
 
               <div className="flex items-center gap-2">
                 <select
@@ -237,7 +284,7 @@ export default function AdminRecapPage() {
                   ) : memberLeaderboard.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="p-8 text-center text-slate-500">
-                        Belum ada data rekapitulasi jam duty.
+                        Belum ada data rekapitulasi jam duty untuk periode {periodLabels[periodFilter]}.
                       </td>
                     </tr>
                   ) : (
