@@ -46,12 +46,24 @@ export async function GET(request: Request) {
     }));
 
     if (format === 'csv') {
-      const csvHeader = 'No,Nama Discord,Jabatan,Nama OOC,Steam Hex,Waktu IN,Waktu OUT,Durasi (Menit),Status\n';
+      const dailyTotals: Record<string, number> = {};
+      exportRecords.forEach((rec) => {
+        if (rec.status === 'DUTY_SELESAI' && rec.duration_minutes) {
+          const dateStr = new Date(rec.duty_in_time).toISOString().slice(0, 10);
+          const key = `${rec.discord_name}_${dateStr}`;
+          dailyTotals[key] = (dailyTotals[key] || 0) + rec.duration_minutes;
+        }
+      });
+
+      const csvHeader = 'No,Nama Discord,Jabatan,Nama OOC,Steam Hex,Waktu IN,Waktu OUT,Durasi Sesi (Menit),Total Harian (Menit),Target 3 Jam,Status\n';
       const csvRows = exportRecords
-        .map(
-          (r, idx) =>
-            `${idx + 1},"${r.discord_name}","${r.position_name}","${r.ooc_name}","${r.steam_hex}","${r.duty_in_time.toISOString()}","${r.duty_out_time ? r.duty_out_time.toISOString() : ''}",${r.duration_minutes || 0},"${r.status}"`
-        )
+        .map((r, idx) => {
+          const dateStr = new Date(r.duty_in_time).toISOString().slice(0, 10);
+          const key = `${r.discord_name}_${dateStr}`;
+          const dayTotalMin = dailyTotals[key] || (r.duration_minutes || 0);
+          const targetStatusText = dayTotalMin >= 180 ? 'Terpenuhi' : 'Belum Terpenuhi';
+          return `${idx + 1},"${r.discord_name}","${r.position_name}","${r.ooc_name}","${r.steam_hex}","${r.duty_in_time.toISOString()}","${r.duty_out_time ? r.duty_out_time.toISOString() : ''}",${r.duration_minutes || 0},${dayTotalMin},"${targetStatusText}","${r.status}"`;
+        })
         .join('\n');
 
       return new Response(csvHeader + csvRows, {
