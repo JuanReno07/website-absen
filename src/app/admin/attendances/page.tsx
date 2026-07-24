@@ -46,20 +46,16 @@ export default function AdminAttendancesPage() {
 
   const fetchAttendances = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
       if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
 
-      // Execute all 3 API requests concurrently in parallel for maximum speed
-      const [authRes, posRes, res] = await Promise.all([
-        fetch('/api/auth/me'),
+      const [posRes, res] = await Promise.all([
         fetch('/api/admin/positions'),
         fetch(`/api/admin/attendances?${params.toString()}`),
       ]);
-
-      const authData = await authRes.json();
-      if (authData.authenticated) setUser(authData.user);
 
       if (posRes.ok) {
         const posData = await posRes.json();
@@ -69,6 +65,8 @@ export default function AdminAttendancesPage() {
       if (res.ok) {
         const data = await res.json();
         setAttendances(data.attendances || []);
+      } else if (res.status === 403 || res.status === 401) {
+        window.location.href = '/dashboard';
       }
     } catch (e) {
       console.error('Fetch attendances error:', e);
@@ -231,7 +229,29 @@ export default function AdminAttendancesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {attendances.map((rec) => {
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="p-3"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3 text-right"><div className="w-20 h-7 bg-slate-800/80 rounded-lg ml-auto"></div></td>
+                      </tr>
+                    ))
+                  ) : attendances.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="p-8 text-center text-slate-500">
+                        Tidak ada data absensi yang ditemukan.
+                      </td>
+                    </tr>
+                  ) : (
+                    attendances.map((rec) => {
                     const cfg = DUTY_STATUS_CONFIG[rec.status] || DUTY_STATUS_CONFIG.BELUM_DUTY;
                     return (
                       <tr key={rec.id} className="hover:bg-slate-900/40">
@@ -304,7 +324,7 @@ export default function AdminAttendancesPage() {
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>

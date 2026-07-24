@@ -39,24 +39,20 @@ export default function AdminMembersPage() {
 
   const fetchMembers = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
       if (roleFilter !== 'ALL') params.append('role', roleFilter);
       if (statusFilter !== 'ALL') params.append('is_active', statusFilter);
 
-      const [authRes, res] = await Promise.all([
-        fetch('/api/auth/me'),
-        fetch(`/api/admin/members?${params.toString()}`),
-      ]);
-
-      const authData = await authRes.json();
-      if (authData.authenticated) setUser(authData.user);
-
+      const res = await fetch(`/api/admin/members?${params.toString()}`);
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setMembers(data.members || []);
         setPositions(data.positions || []);
+      } else if (res.status === 403 || res.status === 401) {
+        window.location.href = '/dashboard';
       }
     } catch (e) {
       console.error('Fetch members error:', e);
@@ -259,7 +255,26 @@ export default function AdminMembersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {members.map((m) => (
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="p-4"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-36 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4 text-right"><div className="w-24 h-7 bg-slate-800/80 rounded-lg ml-auto"></div></td>
+                      </tr>
+                    ))
+                  ) : members.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-500">
+                        Tidak ada data anggota yang ditemukan.
+                      </td>
+                    </tr>
+                  ) : (
+                    members.map((m) => (
                     <tr key={m.id} className="hover:bg-slate-900/40">
                       <td className="p-4">
                         <div>
@@ -308,8 +323,9 @@ export default function AdminMembersPage() {
                           </button>
                         </div>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
