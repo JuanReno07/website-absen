@@ -45,28 +45,33 @@ export default function AdminAttendancesPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const fetchAttendances = async () => {
-    setLoading(true);
     try {
-      const authRes = await fetch('/api/auth/me');
-      const authData = await authRes.json();
-      if (authData.authenticated) setUser(authData.user);
-
-      const posRes = await fetch('/api/admin/positions');
-      const posData = await posRes.json();
-      if (posRes.ok) setPositions(posData.positions || []);
-
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
       if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
 
-      const res = await fetch(`/api/admin/attendances?${params.toString()}`);
-      const data = await res.json();
+      // Execute all 3 API requests concurrently in parallel for maximum speed
+      const [authRes, posRes, res] = await Promise.all([
+        fetch('/api/auth/me'),
+        fetch('/api/admin/positions'),
+        fetch(`/api/admin/attendances?${params.toString()}`),
+      ]);
+
+      const authData = await authRes.json();
+      if (authData.authenticated) setUser(authData.user);
+
+      if (posRes.ok) {
+        const posData = await posRes.json();
+        setPositions(posData.positions || []);
+      }
+
       if (res.ok) {
+        const data = await res.json();
         setAttendances(data.attendances || []);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Fetch attendances error:', e);
     } finally {
       setLoading(false);
     }
