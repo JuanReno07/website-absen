@@ -18,19 +18,21 @@ export default function AdminPositionsPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const fetchPositions = async () => {
-    setLoading(true);
     try {
-      const authRes = await fetch('/api/auth/me');
+      const [authRes, res] = await Promise.all([
+        fetch('/api/auth/me'),
+        fetch('/api/admin/positions'),
+      ]);
+
       const authData = await authRes.json();
       if (authData.authenticated) setUser(authData.user);
 
-      const res = await fetch('/api/admin/positions');
-      const data = await res.json();
       if (res.ok) {
+        const data = await res.json();
         setPositions(data.positions || []);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Fetch positions error:', e);
     } finally {
       setLoading(false);
     }
