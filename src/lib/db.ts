@@ -6,14 +6,14 @@ function createPrismaClient(): PrismaClient {
   // In production (Vercel), use Turso cloud database
   if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
     const { createClient } = require('@libsql/client');
-    const { PrismaLibSQL } = require('@prisma/adapter-libsql');
+    const { PrismaLibSql } = require('@prisma/adapter-libsql');
 
     const libsql = createClient({
       url: process.env.TURSO_DATABASE_URL,
       authToken: process.env.TURSO_AUTH_TOKEN,
     });
 
-    const adapter = new PrismaLibSQL(libsql);
+    const adapter = new PrismaLibSql(libsql);
     return new PrismaClient({
       adapter,
       log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
