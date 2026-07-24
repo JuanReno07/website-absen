@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Login error:', error);
     return NextResponse.json(
-      { error: 'Terjadi kesalahan pada server saat login.' },
+      { error: error?.message ? `Terjadi kesalahan pada server saat login: ${error.message}` : 'Terjadi kesalahan pada server saat login.' },
       { status: 500 }
     );
   }
