@@ -45,6 +45,7 @@ export default function DashboardPage() {
       const authData = await authRes.json();
 
       if (!authData || !authData.authenticated) {
+        setLoading(false);
         window.location.href = '/login';
         return;
       }

@@ -2,14 +2,19 @@ import { PrismaClient } from '@prisma/client';
 import { createClient } from '@libsql/client';
 import { PrismaLibSQL } from '@prisma/adapter-libsql';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function createPrismaClient(): PrismaClient {
+function getPrismaClient(): PrismaClient {
+  if (globalForPrisma.prisma) {
+    return globalForPrisma.prisma;
+  }
+
   const tursoUrl = process.env.TURSO_DATABASE_URL;
   const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
 
+  let client: PrismaClient;
+
   if (tursoUrl && tursoAuthToken) {
-    // Convert libsql:// to https:// for HTTP fetch in Vercel Serverless
     const url = tursoUrl.startsWith('libsql://')
       ? tursoUrl.replace('libsql://', 'https://')
       : tursoUrl;
@@ -20,18 +25,18 @@ function createPrismaClient(): PrismaClient {
     });
 
     const adapter = new PrismaLibSQL(libsql);
-    return new PrismaClient({
+    client = new PrismaClient({
       adapter,
       log: ['error'],
     } as any);
+  } else {
+    client = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    });
   }
 
-  // Fallback to local SQLite when Turso env vars are not set
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
+  globalForPrisma.prisma = client;
+  return client;
 }
 
-export const prisma = globalForPrisma.prisma || createPrismaClient();
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma = getPrismaClient();
