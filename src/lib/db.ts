@@ -1,30 +1,31 @@
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs';
-import path from 'path';
-
-// Fix for Vercel Serverless SQLite path resolution & read/write permissions
-if (process.env.VERCEL) {
-  try {
-    const tmpDb = '/tmp/dev.db';
-    const rootDb = path.join(process.cwd(), 'prisma', 'dev.db');
-    
-    if (!fs.existsSync(tmpDb)) {
-      if (fs.existsSync(rootDb)) {
-        fs.copyFileSync(rootDb, tmpDb);
-      }
-    }
-    process.env.DATABASE_URL = 'file:/tmp/dev.db';
-  } catch (e) {
-    console.error('Vercel DB copy notice:', e);
-  }
-}
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
+function createPrismaClient(): PrismaClient {
+  // In production (Vercel), use Turso cloud database
+  if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+    const { createClient } = require('@libsql/client');
+    const { PrismaLibSQL } = require('@prisma/adapter-libsql');
+
+    const libsql = createClient({
+      url: process.env.TURSO_DATABASE_URL,
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    });
+
+    const adapter = new PrismaLibSQL(libsql);
+    return new PrismaClient({
+      adapter,
+      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    } as any);
+  }
+
+  // In development, use local SQLite
+  return new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
+}
+
+export const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
