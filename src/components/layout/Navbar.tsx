@@ -41,12 +41,12 @@ export default function Navbar({
   const DEFAULT_LOGO = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
   const DEFAULT_NAME = 'ASE Duty System';
 
-  // Instant 0ms session user state to prevent login button flicker on page navigation
+  // Instant 0ms session user state from localStorage to eliminate any login button flicker
   const [currentUser, setCurrentUser] = useState<any>(() => {
     if (initialUser) return initialUser;
     if (typeof window !== 'undefined') {
       try {
-        const cachedUser = sessionStorage.getItem('ase_user_session');
+        const cachedUser = localStorage.getItem('ase_user_session');
         if (cachedUser) return JSON.parse(cachedUser);
       } catch (e) {}
     }
@@ -59,7 +59,7 @@ export default function Navbar({
       setCurrentUser(initialUser);
       if (typeof window !== 'undefined') {
         try {
-          sessionStorage.setItem('ase_user_session', JSON.stringify(initialUser));
+          localStorage.setItem('ase_user_session', JSON.stringify(initialUser));
         } catch (e) {}
       }
     }
@@ -95,12 +95,12 @@ export default function Navbar({
         if (data.authenticated && data.user) {
           setCurrentUser(data.user);
           try {
-            sessionStorage.setItem('ase_user_session', JSON.stringify(data.user));
+            localStorage.setItem('ase_user_session', JSON.stringify(data.user));
           } catch (e) {}
         } else if (data.authenticated === false) {
           setCurrentUser(null);
           try {
-            sessionStorage.removeItem('ase_user_session');
+            localStorage.removeItem('ase_user_session');
           } catch (e) {}
         }
 
@@ -136,6 +136,9 @@ export default function Navbar({
       if (e.key === 'ase_system_name' && e.newValue) {
         setCurrentSystemName(e.newValue);
       }
+      if (e.key === 'ase_user_session' && e.newValue) {
+        try { setCurrentUser(JSON.parse(e.newValue)); } catch (ex) {}
+      }
     };
     window.addEventListener('storage', handleStorageChange);
 
@@ -148,7 +151,7 @@ export default function Navbar({
   const handleLogout = async () => {
     try {
       if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('ase_user_session');
+        localStorage.removeItem('ase_user_session');
       }
       await fetch('/api/auth/logout', { method: 'POST' });
       router.push('/login');
@@ -168,6 +171,8 @@ export default function Navbar({
   if (currentUser?.role === 'ADMIN') {
     navLinks.push({ href: '/admin', label: 'Panel Admin', icon: Shield });
   }
+
+  const isPublicPage = pathname === '/login' || pathname === '/register';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl shadow-xl">
@@ -275,13 +280,17 @@ export default function Navbar({
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
             </div>
-          ) : (
+          ) : isPublicPage ? (
             <Link
               href="/login"
               className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-extrabold rounded-xl shadow-md transition-all whitespace-nowrap"
             >
               Login
             </Link>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="w-28 h-9 bg-slate-900/90 border border-slate-800 rounded-xl animate-pulse"></div>
+            </div>
           )}
         </div>
       </div>
