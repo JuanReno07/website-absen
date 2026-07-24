@@ -203,35 +203,50 @@ export default function AdminRecapPage() {
                     <th className="p-3">Nama Anggota</th>
                     <th className="p-3">Jabatan</th>
                     <th className="p-3">Jumlah Sesi</th>
+                    <th className="p-3">Target Harian (3 Jam)</th>
                     <th className="p-3 text-right">Total Jam Duty</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {memberLeaderboard.map((m, idx) => (
-                    <tr key={idx} className="hover:bg-slate-900/40">
-                      <td className="p-3">
-                        <span
-                          className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] font-mono ${
-                            idx === 0
-                              ? 'bg-amber-400 text-black'
-                              : idx === 1
-                              ? 'bg-slate-300 text-black'
-                              : idx === 2
-                              ? 'bg-amber-700 text-white'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          {idx + 1}
-                        </span>
-                      </td>
-                      <td className="p-3 font-bold text-slate-100">{m.name}</td>
-                      <td className="p-3 text-brand-400">{m.pos}</td>
-                      <td className="p-3 font-mono">{m.sessions} Sesi</td>
-                      <td className="p-3 text-right font-mono font-extrabold text-emerald-400 text-sm">
-                        {formatDurationMinutes(m.totalMin)}
-                      </td>
-                    </tr>
-                  ))}
+                  {memberLeaderboard.map((m, idx) => {
+                    const isFulfilled = m.totalMin >= 180;
+                    return (
+                      <tr key={idx} className="hover:bg-slate-900/40">
+                        <td className="p-3">
+                          <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] font-mono ${
+                              idx === 0
+                                ? 'bg-amber-400 text-black'
+                                : idx === 1
+                                ? 'bg-slate-300 text-black'
+                                : idx === 2
+                                ? 'bg-amber-700 text-white'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td className="p-3 font-bold text-slate-100">{m.name}</td>
+                        <td className="p-3 text-brand-400">{m.pos}</td>
+                        <td className="p-3 font-mono">{m.sessions} Sesi</td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                              isFulfilled
+                                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
+                                : 'bg-red-950/80 text-red-400 border-red-500/40'
+                            }`}
+                          >
+                            {isFulfilled ? 'Terpenuhi (≥ 3 Jam)' : 'Belum Terpenuhi (< 3 Jam)'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right font-mono font-extrabold text-emerald-400 text-sm">
+                          {formatDurationMinutes(m.totalMin)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
