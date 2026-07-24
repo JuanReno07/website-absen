@@ -96,7 +96,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-6 relative z-10">
         {/* Header Branding */}
         <div className="text-center space-y-3 flex flex-col items-center">
-          <div className="relative p-[2.5px] rounded-3xl bg-gradient-to-r from-brand-600 via-red-500 to-brand-600 shadow-2xl shadow-brand-500/30 overflow-hidden transform hover:scale-105 transition-transform duration-300">
+          <div className="relative p-[2.5px] rounded-3xl bg-gradient-to-r from-brand-600 via-red-500 to-brand-600 shadow-2xl shadow-brand-500/30 overflow-hidden logo-hover-box">
             <div className="relative w-28 h-28 flex items-center justify-center p-3 rounded-[22px] bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 border border-slate-300 shadow-inner">
               <img
                 src={currentLogo}
