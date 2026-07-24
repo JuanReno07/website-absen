@@ -24,21 +24,21 @@ export default function AdminLeavesPage() {
   const [saving, setSaving] = useState(false);
 
   const fetchAdminLeaves = async () => {
-    setLoading(true);
     try {
-      const authRes = await fetch('/api/auth/me');
-      const authData = await authRes.json();
-      if (authData.authenticated) setUser(authData.user);
-
+      setLoading(true);
       const params = new URLSearchParams();
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
       if (search) params.append('search', search);
 
       const res = await fetch(`/api/admin/leaves?${params.toString()}`);
       const data = await res.json();
-      if (res.ok) setLeaveRequests(data.leaveRequests || []);
+      if (res.ok) {
+        setLeaveRequests(data.leaveRequests || []);
+      } else if (res.status === 403 || res.status === 401) {
+        window.location.href = '/dashboard';
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Fetch leaves error:', e);
     } finally {
       setLoading(false);
     }
@@ -136,30 +136,40 @@ export default function AdminLeavesPage() {
 
           {/* Main Table */}
           <div className="glass-card rounded-3xl overflow-hidden">
-            {loading ? (
-              <div className="py-12 flex justify-center">
-                <div className="w-8 h-8 border-4 border-brand-500/30 border-t-brand-500 rounded-full animate-spin"></div>
-              </div>
-            ) : leaveRequests.length === 0 ? (
-              <p className="text-center py-12 text-slate-500 text-xs">
-                Tidak ada data pengajuan izin dengan filter ini.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">Nama Anggota</th>
+                    <th className="p-3">Jabatan</th>
+                    <th className="p-3">Jenis Izin</th>
+                    <th className="p-3">Periode Izin</th>
+                    <th className="p-3">Alasan</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Aksi Admin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="p-3"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-36 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3 text-right"><div className="w-24 h-7 bg-slate-800/80 rounded-lg ml-auto"></div></td>
+                      </tr>
+                    ))
+                  ) : leaveRequests.length === 0 ? (
                     <tr>
-                      <th className="p-3">Nama Anggota</th>
-                      <th className="p-3">Jabatan</th>
-                      <th className="p-3">Jenis Izin</th>
-                      <th className="p-3">Periode Izin</th>
-                      <th className="p-3">Alasan</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Aksi Admin</th>
+                      <td colSpan={7} className="p-8 text-center text-slate-500">
+                        Tidak ada data pengajuan izin dengan filter ini.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                    {leaveRequests.map((l) => (
+                  ) : (
+                    leaveRequests.map((l) => (
                       <tr key={l.id} className="hover:bg-slate-900/40">
                         <td className="p-3 font-bold text-slate-100">{l.user.discord_name}</td>
                         <td className="p-3 text-brand-400 font-semibold">{l.user.position.name}</td>
@@ -212,11 +222,11 @@ export default function AdminLeavesPage() {
                           )}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </main>
       </div>

@@ -11,19 +11,25 @@ export default function AdminAuditLogsPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchAuditLogs = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/audit-logs');
+      const data = await res.json();
+      if (res.ok) {
+        setLogs(data.logs || []);
+      } else if (res.status === 403 || res.status === 401) {
+        window.location.href = '/dashboard';
+      }
+    } catch (e) {
+      console.error('Fetch audit logs error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.authenticated) setUser(data.user);
-        fetch('/api/admin/audit-logs')
-          .then((r) => r.json())
-          .then((d) => {
-            setLogs(d.logs || []);
-            setLoading(false);
-          });
-      })
-      .catch(() => setLoading(false));
+    fetchAuditLogs();
   }, []);
 
   return (
@@ -45,27 +51,37 @@ export default function AdminAuditLogsPage() {
           </div>
 
           <div className="glass-card rounded-3xl overflow-hidden">
-            {loading ? (
-              <div className="py-12 flex justify-center">
-                <div className="w-8 h-8 border-4 border-brand-500/30 border-t-brand-500 rounded-full animate-spin"></div>
-              </div>
-            ) : logs.length === 0 ? (
-              <div className="py-12 text-center text-slate-500 text-xs">Belum ada catatan audit log.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+                  <tr>
+                    <th className="p-4">Waktu</th>
+                    <th className="p-4">Admin Executed</th>
+                    <th className="p-4">Aksi</th>
+                    <th className="p-4">Tabel Database</th>
+                    <th className="p-4">Perubahan Data (JSON)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-200 font-mono">
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="p-4"><div className="w-36 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-4"><div className="w-48 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                      </tr>
+                    ))
+                  ) : logs.length === 0 ? (
                     <tr>
-                      <th className="p-4">Waktu</th>
-                      <th className="p-4">Admin Executed</th>
-                      <th className="p-4">Aksi</th>
-                      <th className="p-4">Tabel Database</th>
-                      <th className="p-4">Perubahan Data (JSON)</th>
+                      <td colSpan={5} className="p-8 text-center text-slate-500 font-sans">
+                        Belum ada catatan audit log.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                    {logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-900/40 font-mono">
+                  ) : (
+                    logs.map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-900/40">
                         <td className="p-4 text-slate-400">
                           {formatIndonesianDate(log.created_at)}, {formatIndonesianTime(log.created_at)}
                         </td>
@@ -78,11 +94,11 @@ export default function AdminAuditLogsPage() {
                           {log.new_data || log.old_data || '-'}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </main>
       </div>

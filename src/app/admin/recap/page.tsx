@@ -25,27 +25,30 @@ export default function AdminRecapPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchRecapData = async () => {
-    setLoading(true);
     try {
-      const authRes = await fetch('/api/auth/me');
-      const authData = await authRes.json();
-      if (authData.authenticated) setUser(authData.user);
-
-      const posRes = await fetch('/api/admin/positions');
-      const posData = await posRes.json();
-      if (posRes.ok) setPositions(posData.positions || []);
-
+      setLoading(true);
       const params = new URLSearchParams();
       if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
 
-      const res = await fetch(`/api/admin/attendances?${params.toString()}`);
-      const data = await res.json();
+      const [posRes, res] = await Promise.all([
+        fetch('/api/admin/positions'),
+        fetch(`/api/admin/attendances?${params.toString()}`),
+      ]);
+
+      if (posRes.ok) {
+        const posData = await posRes.json();
+        setPositions(posData.positions || []);
+      }
+
       if (res.ok) {
+        const data = await res.json();
         setAttendances(data.attendances || []);
+      } else if (res.status === 403 || res.status === 401) {
+        window.location.href = '/dashboard';
       }
     } catch (e) {
-      console.error(e);
+      console.error('Fetch recap error:', e);
     } finally {
       setLoading(false);
     }
@@ -138,37 +141,49 @@ export default function AdminRecapPage() {
 
           {/* Statistical Highlights Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="glass-card rounded-2xl p-5 space-y-1">
-              <span className="text-xs text-slate-400 font-semibold uppercase block">Total Jam Terkumpul</span>
-              <p className="text-2xl font-extrabold text-brand-400 font-mono">
-                {formatDurationMinutes(totalCompletedMinutes)}
-              </p>
-              <p className="text-[10px] text-slate-500">Dari {completedDuties.length} sesi duty selesai</p>
-            </div>
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="glass-card rounded-2xl p-5 space-y-2 animate-pulse">
+                  <div className="w-24 h-3 bg-slate-800 rounded"></div>
+                  <div className="w-28 h-6 bg-slate-800 rounded font-mono"></div>
+                  <div className="w-20 h-2 bg-slate-800/60 rounded"></div>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="glass-card rounded-2xl p-5 space-y-1">
+                  <span className="text-xs text-slate-400 font-semibold uppercase block">Total Jam Terkumpul</span>
+                  <p className="text-2xl font-extrabold text-brand-400 font-mono">
+                    {formatDurationMinutes(totalCompletedMinutes)}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Dari {completedDuties.length} sesi duty selesai</p>
+                </div>
 
-            <div className="glass-card rounded-2xl p-5 space-y-1">
-              <span className="text-xs text-slate-400 font-semibold uppercase block">Rata-Rata Durasi Duty</span>
-              <p className="text-2xl font-extrabold text-blue-400 font-mono">
-                {formatDurationMinutes(avgMinutes)}
-              </p>
-              <p className="text-[10px] text-slate-500">Per sesi duty</p>
-            </div>
+                <div className="glass-card rounded-2xl p-5 space-y-1">
+                  <span className="text-xs text-slate-400 font-semibold uppercase block">Rata-Rata Durasi Duty</span>
+                  <p className="text-2xl font-extrabold text-blue-400 font-mono">
+                    {formatDurationMinutes(avgMinutes)}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Per sesi duty</p>
+                </div>
 
-            <div className="glass-card rounded-2xl p-5 space-y-1">
-              <span className="text-xs text-slate-400 font-semibold uppercase block">Sesi Terlama</span>
-              <p className="text-2xl font-extrabold text-emerald-400 font-mono">
-                {formatDurationMinutes(longestMinutes)}
-              </p>
-              <p className="text-[10px] text-slate-500">Rekor duty terpanjang</p>
-            </div>
+                <div className="glass-card rounded-2xl p-5 space-y-1">
+                  <span className="text-xs text-slate-400 font-semibold uppercase block">Sesi Terlama</span>
+                  <p className="text-2xl font-extrabold text-emerald-400 font-mono">
+                    {formatDurationMinutes(longestMinutes)}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Rekor duty terpanjang</p>
+                </div>
 
-            <div className="glass-card rounded-2xl p-5 space-y-1">
-              <span className="text-xs text-slate-400 font-semibold uppercase block">Total Seluruh Sesi</span>
-              <p className="text-2xl font-extrabold text-slate-100 font-mono">
-                {totalSessions} Sesi
-              </p>
-              <p className="text-[10px] text-slate-500">Dalam periode filter saat ini</p>
-            </div>
+                <div className="glass-card rounded-2xl p-5 space-y-1">
+                  <span className="text-xs text-slate-400 font-semibold uppercase block">Total Seluruh Sesi</span>
+                  <p className="text-2xl font-extrabold text-slate-100 font-mono">
+                    {totalSessions} Sesi
+                  </p>
+                  <p className="text-[10px] text-slate-500">Dalam periode filter saat ini</p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Leaderboard Table per Member */}
@@ -208,45 +223,64 @@ export default function AdminRecapPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {memberLeaderboard.map((m, idx) => {
-                    const isFulfilled = m.totalMin >= 180;
-                    return (
-                      <tr key={idx} className="hover:bg-slate-900/40">
-                        <td className="p-3">
-                          <span
-                            className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] font-mono ${
-                              idx === 0
-                                ? 'bg-amber-400 text-black'
-                                : idx === 1
-                                ? 'bg-slate-300 text-black'
-                                : idx === 2
-                                ? 'bg-amber-700 text-white'
-                                : 'bg-slate-800 text-slate-400'
-                            }`}
-                          >
-                            {idx + 1}
-                          </span>
-                        </td>
-                        <td className="p-3 font-bold text-slate-100">{m.name}</td>
-                        <td className="p-3 text-brand-400">{m.pos}</td>
-                        <td className="p-3 font-mono">{m.sessions} Sesi</td>
-                        <td className="p-3">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-                              isFulfilled
-                                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
-                                : 'bg-red-950/80 text-red-400 border-red-500/40'
-                            }`}
-                          >
-                            {isFulfilled ? 'Terpenuhi (≥ 3 Jam)' : 'Belum Terpenuhi (< 3 Jam)'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right font-mono font-extrabold text-emerald-400 text-sm">
-                          {formatDurationMinutes(m.totalMin)}
-                        </td>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="p-3"><div className="w-8 h-4 bg-slate-800/80 rounded-full"></div></td>
+                        <td className="p-3"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3"><div className="w-28 h-5 bg-slate-800/80 rounded-full"></div></td>
+                        <td className="p-3 text-right"><div className="w-20 h-5 bg-slate-800/80 rounded-lg ml-auto"></div></td>
                       </tr>
-                    );
-                  })}
+                    ))
+                  ) : memberLeaderboard.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-500">
+                        Belum ada data rekapitulasi jam duty.
+                      </td>
+                    </tr>
+                  ) : (
+                    memberLeaderboard.map((m, idx) => {
+                      const isFulfilled = m.totalMin >= 180;
+                      return (
+                        <tr key={idx} className="hover:bg-slate-900/40">
+                          <td className="p-3">
+                            <span
+                              className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] font-mono ${
+                                idx === 0
+                                  ? 'bg-amber-400 text-black'
+                                  : idx === 1
+                                  ? 'bg-slate-300 text-black'
+                                  : idx === 2
+                                  ? 'bg-amber-700 text-white'
+                                  : 'bg-slate-800 text-slate-400'
+                              }`}
+                            >
+                              {idx + 1}
+                            </span>
+                          </td>
+                          <td className="p-3 font-bold text-slate-100">{m.name}</td>
+                          <td className="p-3 text-brand-400">{m.pos}</td>
+                          <td className="p-3 font-mono">{m.sessions} Sesi</td>
+                          <td className="p-3">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                                isFulfilled
+                                  ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
+                                  : 'bg-red-950/80 text-red-400 border-red-500/40'
+                              }`}
+                            >
+                              {isFulfilled ? 'Terpenuhi (≥ 3 Jam)' : 'Belum Terpenuhi (< 3 Jam)'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right font-mono font-extrabold text-emerald-400 text-sm">
+                            {formatDurationMinutes(m.totalMin)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
