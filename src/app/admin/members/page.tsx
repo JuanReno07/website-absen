@@ -38,26 +38,28 @@ export default function AdminMembersPage() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchMembers = async () => {
-    setLoading(true);
     try {
-      const authRes = await fetch('/api/auth/me');
-      const authData = await authRes.json();
-      if (authData.authenticated) setUser(authData.user);
-
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
       if (roleFilter !== 'ALL') params.append('role', roleFilter);
       if (statusFilter !== 'ALL') params.append('is_active', statusFilter);
 
-      const res = await fetch(`/api/admin/members?${params.toString()}`);
-      const data = await res.json();
+      const [authRes, res] = await Promise.all([
+        fetch('/api/auth/me'),
+        fetch(`/api/admin/members?${params.toString()}`),
+      ]);
+
+      const authData = await authRes.json();
+      if (authData.authenticated) setUser(authData.user);
+
       if (res.ok) {
+        const data = await res.json();
         setMembers(data.members || []);
         setPositions(data.positions || []);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Fetch members error:', e);
     } finally {
       setLoading(false);
     }

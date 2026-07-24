@@ -29,7 +29,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({
-  user,
+  user: initialUser,
   activeDuty,
   systemName: initialSystemName,
   logoUrl: initialLogoUrl,
@@ -40,6 +40,30 @@ export default function Navbar({
 
   const DEFAULT_LOGO = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
   const DEFAULT_NAME = 'ASE Duty System';
+
+  // Instant 0ms session user state to prevent login button flicker on page navigation
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    if (initialUser) return initialUser;
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedUser = sessionStorage.getItem('ase_user_session');
+        if (cachedUser) return JSON.parse(cachedUser);
+      } catch (e) {}
+    }
+    return null;
+  });
+
+  // Sync if parent page passes updated user prop
+  useEffect(() => {
+    if (initialUser) {
+      setCurrentUser(initialUser);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('ase_user_session', JSON.stringify(initialUser));
+        } catch (e) {}
+      }
+    }
+  }, [initialUser]);
 
   // Instant 0ms pre-hydration from localStorage to eliminate old logo flash
   const [currentLogo, setCurrentLogo] = useState<string>(() => {
@@ -68,20 +92,24 @@ export default function Navbar({
     fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
+        if (data.authenticated && data.user) {
+          setCurrentUser(data.user);
+          try {
+            sessionStorage.setItem('ase_user_session', JSON.stringify(data.user));
+          } catch (e) {}
+        } else if (data.authenticated === false) {
+          setCurrentUser(null);
+          try {
+            sessionStorage.removeItem('ase_user_session');
+          } catch (e) {}
+        }
+
         if (data.settings) {
-          // Always update logo from database - this is the source of truth
           const newLogo = data.settings.logo || DEFAULT_LOGO;
           setCurrentLogo(newLogo);
           try {
-            // Only cache non-base64 logos in localStorage (base64 can exceed quota)
-            if (!newLogo.startsWith('data:')) {
-              localStorage.setItem('ase_system_logo', newLogo);
-            } else {
-              // For base64 logos, try to cache but silently handle quota errors
-              localStorage.setItem('ase_system_logo', newLogo);
-            }
+            localStorage.setItem('ase_system_logo', newLogo);
           } catch (e) {
-            // localStorage quota exceeded - clear old cache to make room
             try { localStorage.removeItem('ase_system_logo'); } catch (ex) {}
           }
 
@@ -98,11 +126,9 @@ export default function Navbar({
   useEffect(() => {
     loadSettings();
 
-    // Listen for settings update event (same tab)
     const handleSettingsEvent = () => loadSettings();
     window.addEventListener('systemSettingsUpdated', handleSettingsEvent);
 
-    // Listen for storage changes (cross-tab sync)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'ase_system_logo' && e.newValue) {
         setCurrentLogo(e.newValue);
@@ -121,6 +147,9 @@ export default function Navbar({
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('ase_user_session');
+      }
       await fetch('/api/auth/logout', { method: 'POST' });
       router.push('/login');
       router.refresh();
@@ -136,7 +165,7 @@ export default function Navbar({
     { href: '/profile', label: 'Profil Saya', icon: User },
   ];
 
-  if (user?.role === 'ADMIN') {
+  if (currentUser?.role === 'ADMIN') {
     navLinks.push({ href: '/admin', label: 'Panel Admin', icon: Shield });
   }
 
@@ -145,7 +174,7 @@ export default function Navbar({
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
           {/* Logo & System Name */}
-          <Link href={user ? '/dashboard' : '/login'} className="flex items-center gap-3 group shrink-0">
+          <Link href={currentUser ? '/dashboard' : '/login'} className="flex items-center gap-3 group shrink-0">
             {/* Outer Spinning Glow Ring Container */}
             <div className="relative p-[2px] rounded-2xl bg-gradient-to-r from-red-600 via-amber-500 to-red-600 shadow-lg shadow-red-600/30 overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-amber-400 to-red-700 animate-spin-slow opacity-80"></div>
@@ -174,7 +203,7 @@ export default function Navbar({
           </Link>
 
           {/* Desktop Navigation Links */}
-          {user && (
+          {currentUser && (
             <nav className="hidden xl:flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800/90 shadow-inner shrink-0">
               {navLinks.map((link) => {
                 const Icon = link.icon;
@@ -198,7 +227,7 @@ export default function Navbar({
           )}
 
           {/* Active Duty Indicator & User Profile Pill */}
-          {user ? (
+          {currentUser ? (
             <div className="flex items-center gap-3 shrink-0">
               {/* Duty Status Badge */}
               {activeDuty ? (
@@ -223,10 +252,10 @@ export default function Navbar({
               <div className="hidden lg:flex items-center gap-2 pl-3 border-l border-slate-800">
                 <div className="text-right">
                   <p className="text-xs font-extrabold text-slate-100 truncate max-w-[140px] whitespace-nowrap">
-                    {user.discord_name}
+                    {currentUser.discord_name}
                   </p>
                   <p className="text-[10px] text-brand-400 font-bold truncate max-w-[140px] whitespace-nowrap">
-                    {user.position_name}
+                    {currentUser.position_name}
                   </p>
                 </div>
                 <button
@@ -249,7 +278,7 @@ export default function Navbar({
           ) : (
             <Link
               href="/login"
-              className="px-4 py-2 bg-gradient-to-r from-brand-600 to-red-700 hover:from-brand-500 hover:to-red-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-brand-600/30 transition-all"
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-extrabold rounded-xl shadow-md transition-all whitespace-nowrap"
             >
               Login
             </Link>
@@ -257,15 +286,25 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {user && mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-xl px-4 pt-3 pb-6 space-y-3">
-          <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 mb-2">
-            <p className="text-sm font-bold text-slate-100">{user.discord_name}</p>
-            <p className="text-xs text-brand-400 font-medium">{user.position_name}</p>
-          </div>
+      {/* Mobile Dropdown Drawer Menu */}
+      {mobileMenuOpen && (
+        <div className="xl:hidden border-t border-slate-800 bg-slate-950 p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+          {currentUser && (
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <p className="text-xs font-bold text-slate-100">{currentUser.discord_name}</p>
+                <p className="text-[10px] text-brand-400 font-semibold">{currentUser.position_name}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1 bg-red-950/80 border border-red-800 text-red-300 text-xs font-bold rounded-lg flex items-center gap-1"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Logout
+              </button>
+            </div>
+          )}
 
-          <div className="space-y-1">
+          <nav className="space-y-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href;
@@ -274,28 +313,18 @@ export default function Navbar({
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
                     isActive
-                      ? 'bg-brand-600 text-white'
+                      ? 'bg-brand-600 text-white shadow-md'
                       : 'text-slate-300 hover:bg-slate-900 hover:text-white'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4 text-brand-400" />
                   <span>{link.label}</span>
                 </Link>
               );
             })}
-          </div>
-
-          <div className="pt-2 border-t border-slate-800">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-950/40 border border-red-900/50 text-red-400 font-semibold rounded-xl text-sm hover:bg-red-900/50 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Keluar / Logout
-            </button>
-          </div>
+          </nav>
         </div>
       )}
     </header>
