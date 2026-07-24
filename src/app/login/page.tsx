@@ -36,28 +36,32 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    // Fetch public settings real-time on page load (works in Incognito / new devices)
+    fetch(`/api/public/settings?t=${Date.now()}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((settings) => {
+        if (settings?.logo) {
+          setCurrentLogo(settings.logo);
+          try {
+            localStorage.removeItem('ase_system_logo');
+            localStorage.setItem('ase_system_logo', settings.logo);
+          } catch (e) {}
+        }
+        if (settings?.system_name) {
+          setCurrentSystemName(settings.system_name);
+          try {
+            localStorage.setItem('ase_system_name', settings.system_name);
+          } catch (e) {}
+        }
+      })
+      .catch(() => {});
+
+    // Auth check redirect if already logged in
     fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) {
           router.push('/dashboard');
-        }
-        if (data.settings) {
-          // Always update logo from database - this is the source of truth
-          const newLogo = data.settings.logo || DEFAULT_LOGO;
-          setCurrentLogo(newLogo);
-          try {
-            localStorage.removeItem('ase_system_logo');
-            localStorage.setItem('ase_system_logo', newLogo);
-          } catch (e) {
-            try { localStorage.removeItem('ase_system_logo'); } catch (ex) {}
-          }
-
-          const newName = data.settings.system_name || 'ASE Duty Attendance System';
-          setCurrentSystemName(newName);
-          try {
-            localStorage.setItem('ase_system_name', newName);
-          } catch (e) {}
         }
       })
       .catch(() => {});
