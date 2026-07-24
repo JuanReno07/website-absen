@@ -77,6 +77,25 @@ body {
   transform: rotate(360deg) scale(1.08);
 }
 
+/* Logo Interactive Hover 3D Flip & Lift Effect */
+.logo-hover-box {
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+
+.logo-hover-box:hover {
+  transform: translateY(-6px) scale(1.06);
+  box-shadow: 0 20px 45px -10px rgba(239, 68, 68, 0.55), 0 0 25px rgba(239, 68, 68, 0.35);
+}
+
+.logo-hover-box img {
+  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.logo-hover-box:hover img {
+  transform: perspective(600px) rotateY(360deg) scale(1.15);
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
