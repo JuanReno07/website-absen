@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, COOKIE_NAME } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -35,7 +35,15 @@ export async function GET() {
   }
 
   if (!user) {
-    return NextResponse.json({ authenticated: false, settings }, { status: 200 });
+    const response = NextResponse.json({ authenticated: false, settings }, { status: 200 });
+    // Clear stale or invalid session cookie automatically
+    response.cookies.set(COOKIE_NAME, '', {
+      httpOnly: true,
+      path: '/',
+      maxAge: 0,
+      expires: new Date(0),
+    });
+    return response;
   }
 
   return NextResponse.json({
