@@ -14,44 +14,27 @@ export default function LoginPage() {
 
   const DEFAULT_LOGO = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
 
-  // 0ms instant pre-hydration for logo to eliminate initial flash
-  const [currentLogo, setCurrentLogo] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('ase_system_logo');
-        if (cached) return cached;
-      } catch (e) {}
-    }
-    return DEFAULT_LOGO;
-  });
-
-  const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('ase_system_name');
-        if (cached) return cached;
-      } catch (e) {}
-    }
-    return 'ASE Duty Attendance System';
-  });
+  const [currentLogo, setCurrentLogo] = useState<string>(DEFAULT_LOGO);
+  const [currentSystemName, setCurrentSystemName] = useState<string>('ASE Duty Attendance System');
 
   useEffect(() => {
-    // Fetch public settings real-time on page load (works in Incognito / new devices)
+    // Clear any stale legacy localStorage items that could contaminate logo state
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('ase_system_logo');
+        localStorage.removeItem('ase_system_name');
+      } catch (e) {}
+    }
+
+    // Fetch public settings real-time directly from Database API
     fetch(`/api/public/settings?t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((settings) => {
         if (settings?.logo) {
           setCurrentLogo(settings.logo);
-          try {
-            localStorage.removeItem('ase_system_logo');
-            localStorage.setItem('ase_system_logo', settings.logo);
-          } catch (e) {}
         }
         if (settings?.system_name) {
           setCurrentSystemName(settings.system_name);
-          try {
-            localStorage.setItem('ase_system_name', settings.system_name);
-          } catch (e) {}
         }
       })
       .catch(() => {});
@@ -92,127 +75,117 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || 'Terjadi kesalahan saat login.');
+        setErrorMsg(data.error || 'Login gagal. Periksa username dan password.');
         setLoading(false);
         return;
       }
 
       router.push('/dashboard');
-      router.refresh();
     } catch (err) {
-      setErrorMsg('Gagal terhubung ke server. Periksa koneksi Anda.');
+      setErrorMsg('Terjadi kesalahan koneksi ke server.');
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* High Contrast Background Ornaments */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 py-8 relative overflow-hidden">
+      {/* Dynamic Background Glow Effects */}
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-600/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-red-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="w-full max-w-md relative z-10 space-y-6">
-        {/* Logo Banner Header with Spinning Neon Ring */}
+      <div className="max-w-md w-full space-y-6 relative z-10">
+        {/* Header Branding */}
         <div className="text-center space-y-3">
-          <div className="inline-block relative p-[3px] rounded-3xl bg-gradient-to-r from-red-600 via-amber-400 to-red-600 shadow-2xl shadow-red-600/40 overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-amber-400 to-red-700 animate-spin-slow opacity-90"></div>
-            
-            <div className="relative p-4 rounded-[22px] bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 border-2 border-slate-300 flex items-center justify-center max-w-[260px]">
-              <img
-                src={currentLogo}
-                alt="ASE Roleplay Logo"
-                className="w-full h-auto max-h-24 object-contain animate-logo-3d drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
-                }}
-              />
-            </div>
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl p-2.5 transform hover:scale-105 transition-transform duration-300">
+            <img
+              src={currentLogo}
+              alt="Logo Sistem"
+              className="max-h-full max-w-full object-contain"
+            />
           </div>
-
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
+            <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">
               {currentSystemName}
             </h1>
-            <p className="text-xs text-brand-400 font-bold tracking-widest uppercase mt-1">
-              ASE ROLEPLAY &bull; ASE GROUP
+            <p className="text-xs text-brand-400 font-bold uppercase tracking-wider mt-1">
+              ASE ROLEPLAY • ASE GROUP
             </p>
           </div>
         </div>
 
-        {/* Login Form Card */}
-        <div className="glass-card rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        {/* Login Card */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6 border border-slate-800/80 shadow-2xl">
           {errorMsg && (
-            <div className="p-4 bg-red-950/70 border border-red-800/80 rounded-2xl flex items-start gap-3 text-red-300 text-xs sm:text-sm animate-in fade-in duration-200">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5" />
+            <div className="p-4 bg-red-950/80 border border-red-800/80 rounded-2xl flex items-center gap-3 text-red-200 text-xs">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Username Input */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Username
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                USERNAME
               </label>
               <div className="relative">
-                <User className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Masukkan username Anda"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                  required
+                  className="w-full pl-10 pr-4 py-3 bg-slate-950/90 border border-slate-800 rounded-xl text-slate-100 text-xs placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                 />
               </div>
             </div>
 
-            {/* Password Input */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Password
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                PASSWORD
               </label>
               <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Masukkan password Anda"
-                  className="w-full pl-11 pr-11 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                  required
+                  className="w-full pl-10 pr-10 py-3 bg-slate-950/90 border border-slate-800 rounded-xl text-slate-100 text-xs placeholder-slate-600 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Show Password Option */}
-            <div className="flex items-center justify-between text-xs pt-1">
-              <label className="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-slate-300">
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={showPassword}
                   onChange={(e) => setShowPassword(e.target.checked)}
-                  className="rounded border-slate-700 text-brand-600 focus:ring-brand-500 bg-slate-900"
+                  className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500"
                 />
-                <span>Tampilkan Password</span>
+                <span className="text-xs text-slate-400">Tampilkan Password</span>
               </label>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-brand-600 to-red-700 hover:from-brand-500 hover:to-red-600 text-white font-bold rounded-xl shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-2"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" />
+                  <LogIn className="w-4 h-4" />
                   <span>MASUK SEKARANG</span>
                 </>
               )}
@@ -220,11 +193,11 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Footer info */}
-        <p className="text-center text-[11px] text-slate-500">
-          &copy; 2026 ASE ROLEPLAY &bull; ASE GROUP. All rights reserved.
+        {/* Footer */}
+        <p className="text-center text-[11px] text-slate-600 font-medium">
+          © 2026 ASE ROLEPLAY • ASE GROUP. All rights reserved.
         </p>
       </div>
-    </main>
+    </div>
   );
 }
