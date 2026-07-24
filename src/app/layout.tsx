@@ -5,13 +5,12 @@ import { prisma } from '@/lib/db';
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = 'ASE Duty Attendance System';
-  let favicon = '/Logo/TRANSPARENT_ASERP_BLACK_HORIZONTAL.png';
+  let favicon = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
 
   try {
     const settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
     if (settings?.system_name) title = settings.system_name;
-    // Only use path-based logos for favicon (base64 data URLs are too large for HTML head)
-    if (settings?.logo && !settings.logo.startsWith('data:')) {
+    if (settings?.logo) {
       favicon = settings.logo;
     }
   } catch (e) {}
@@ -22,6 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
     manifest: '/manifest.json',
     icons: {
       icon: favicon,
+      shortcut: favicon,
+      apple: favicon,
     },
   };
 }
@@ -41,6 +42,7 @@ export default async function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="icon" href={settings?.logo || '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png'} />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
           rel="stylesheet"
