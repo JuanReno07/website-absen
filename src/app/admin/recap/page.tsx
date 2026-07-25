@@ -112,7 +112,7 @@ export default function AdminRecapPage() {
     if (!dailyMap[key]) {
       dailyMap[key] = {
         dateStr,
-        duty_in_time: a.duty_in_time,
+        duty_in_time: new Date(a.duty_in_time),
         discord_name: a.user.discord_name,
         position_name: a.user.position.name,
         ooc_name: a.user.ooc_name,
@@ -129,7 +129,7 @@ export default function AdminRecapPage() {
   });
 
   const dailyBreakdownList = Object.values(dailyMap).sort(
-    (a, b) => b.duty_in_time.getTime() - a.duty_in_time.getTime()
+    (a, b) => new Date(b.duty_in_time).getTime() - new Date(a.duty_in_time).getTime()
   );
 
   // 2. Member Summary Leaderboard Map (Total Accumulation)
