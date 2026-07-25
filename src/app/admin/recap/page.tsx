@@ -13,6 +13,8 @@ import {
   BarChart3,
   TrendingUp,
   FileText,
+  CalendarDays,
+  Layers,
 } from 'lucide-react';
 import { formatDurationMinutes, formatIndonesianDate } from '@/lib/utils';
 
@@ -20,16 +22,25 @@ export default function AdminRecapPage() {
   const [user, setUser] = useState<any>(null);
   const [attendances, setAttendances] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
-  const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
+
+  // View Mode: 'daily' (Rekap Per Tanggal) vs 'summary' (Ringkasan Akumulasi)
+  const [viewMode, setViewMode] = useState<'daily' | 'summary'>('daily');
 
   const fetchRecapData = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       params.append('period', periodFilter);
+      if (periodFilter === 'custom') {
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+      }
       if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
 
@@ -60,6 +71,11 @@ export default function AdminRecapPage() {
     fetchRecapData();
   }, [periodFilter, positionFilter, statusFilter]);
 
+  const handleApplyCustomDate = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchRecapData();
+  };
+
   // Aggregate math
   const completedDuties = attendances.filter((a) => a.status === 'DUTY_SELESAI');
   const totalSessions = attendances.length;
@@ -75,7 +91,48 @@ export default function AdminRecapPage() {
   });
   if (shortestMinutes === Infinity) shortestMinutes = 0;
 
-  // Member Leaderboard Map
+  // 1. Grouping Daily Breakdown (Per Tanggal Per Anggota)
+  interface DailyGroup {
+    dateStr: string;
+    duty_in_time: Date;
+    discord_name: string;
+    position_name: string;
+    ooc_name: string;
+    steam_hex: string;
+    session_count: number;
+    total_minutes: number;
+  }
+
+  const dailyMap: Record<string, DailyGroup> = {};
+
+  attendances.forEach((a) => {
+    const dateStr = new Date(a.duty_in_time).toISOString().slice(0, 10);
+    const key = `${a.user.id}_${dateStr}`;
+
+    if (!dailyMap[key]) {
+      dailyMap[key] = {
+        dateStr,
+        duty_in_time: a.duty_in_time,
+        discord_name: a.user.discord_name,
+        position_name: a.user.position.name,
+        ooc_name: a.user.ooc_name,
+        steam_hex: a.user.steam_hex,
+        session_count: 0,
+        total_minutes: 0,
+      };
+    }
+
+    dailyMap[key].session_count += 1;
+    if (a.status === 'DUTY_SELESAI' && a.duration_minutes) {
+      dailyMap[key].total_minutes += a.duration_minutes;
+    }
+  });
+
+  const dailyBreakdownList = Object.values(dailyMap).sort(
+    (a, b) => b.duty_in_time.getTime() - a.duty_in_time.getTime()
+  );
+
+  // 2. Member Summary Leaderboard Map (Total Accumulation)
   const memberMap: Record<string, { name: string; pos: string; totalMin: number; sessions: number }> = {};
   attendances.forEach((a) => {
     const key = a.user.id;
@@ -97,6 +154,10 @@ export default function AdminRecapPage() {
 
   const handleExport = (format: 'excel' | 'csv') => {
     const params = new URLSearchParams({ format, period: periodFilter });
+    if (periodFilter === 'custom') {
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+    }
     if (positionFilter !== 'ALL') params.append('position_id', positionFilter);
     if (statusFilter !== 'ALL') params.append('status', statusFilter);
     window.open(`/api/admin/export?${params.toString()}`, '_blank');
@@ -107,6 +168,7 @@ export default function AdminRecapPage() {
     week: 'Minggu Ini',
     month: 'Bulan Ini',
     all: 'Semua Waktu',
+    custom: startDate && endDate ? `${startDate} s/d ${endDate}` : 'Custom Tanggal',
   };
 
   return (
@@ -124,7 +186,7 @@ export default function AdminRecapPage() {
                 Rekapitulasi Jam Duty & Ekspor Laporan
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Statistik performa jam duty anggota dan pengunduhan berkas laporan Excel/CSV.
+                Statistik rekapitulasi jam duty per tanggal, per minggu, dan per bulan serta unduh Excel.
               </p>
             </div>
 
@@ -148,35 +210,73 @@ export default function AdminRecapPage() {
             </div>
           </div>
 
-          {/* Period Filter Selector & Controls */}
-          <div className="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-800">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-brand-400" />
-              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                FILTER PERIODE LAPORAN:
-              </span>
+          {/* Period Filter Selector & Date Picker Bar */}
+          <div className="glass-card rounded-2xl p-4 space-y-4 border border-slate-800">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-brand-400" />
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                  FILTER PERIODE LAPORAN:
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                {[
+                  { id: 'today', label: 'Hari Ini' },
+                  { id: 'week', label: 'Minggu Ini' },
+                  { id: 'month', label: 'Bulan Ini' },
+                  { id: 'all', label: 'Semua Waktu' },
+                  { id: 'custom', label: 'Pilih Tanggal' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setPeriodFilter(p.id as any)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                      periodFilter === p.id
+                        ? 'bg-brand-600 text-white border-brand-500 shadow-md shadow-brand-600/30'
+                        : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              {[
-                { id: 'today', label: 'Hari Ini' },
-                { id: 'week', label: 'Minggu Ini' },
-                { id: 'month', label: 'Bulan Ini' },
-                { id: 'all', label: 'Semua Waktu' },
-              ].map((p) => (
+            {/* Custom Date Range Controls */}
+            {periodFilter === 'custom' && (
+              <form
+                onSubmit={handleApplyCustomDate}
+                className="pt-3 border-t border-slate-800 flex flex-wrap items-center gap-3"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-semibold">Dari Tanggal:</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-semibold">Sampai Tanggal:</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+
                 <button
-                  key={p.id}
-                  onClick={() => setPeriodFilter(p.id as any)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                    periodFilter === p.id
-                      ? 'bg-brand-600 text-white border-brand-500 shadow-md shadow-brand-600/30'
-                      : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800'
-                  }`}
+                  type="submit"
+                  className="px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow transition-colors"
                 >
-                  {p.label}
+                  Terapkan Tanggal
                 </button>
-              ))}
-            </div>
+              </form>
+            )}
           </div>
 
           {/* Statistical Highlights Grid */}
@@ -228,24 +328,42 @@ export default function AdminRecapPage() {
             )}
           </div>
 
-          {/* Leaderboard Table per Member */}
+          {/* Table Container & View Mode Tabs */}
           <div className="glass-card rounded-3xl p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-amber-400" />
-                  Peringkat Total Jam Duty Anggota ({periodLabels[periodFilter]})
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Total jam duty dan evaluasi pencapaian target minimal 3 jam/hari.
-                </p>
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              {/* View Mode Tabs */}
+              <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+                <button
+                  onClick={() => setViewMode('daily')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    viewMode === 'daily'
+                      ? 'bg-brand-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Rekap Per Tanggal</span>
+                </button>
+
+                <button
+                  onClick={() => setViewMode('summary')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    viewMode === 'summary'
+                      ? 'bg-brand-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Award className="w-4 h-4" />
+                  <span>Ringkasan Akumulasi Anggota</span>
+                </button>
               </div>
 
+              {/* Position Filter */}
               <div className="flex items-center gap-2">
                 <select
                   value={positionFilter}
                   onChange={(e) => setPositionFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-1.5"
+                  className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-3.5 py-2 font-semibold"
                 >
                   <option value="ALL">Semua Jabatan</option>
                   {positions.map((p) => (
@@ -257,80 +375,173 @@ export default function AdminRecapPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
-                  <tr>
-                    <th className="p-3">Peringkat</th>
-                    <th className="p-3">Nama Anggota</th>
-                    <th className="p-3">Jabatan</th>
-                    <th className="p-3">Jumlah Sesi</th>
-                    <th className="p-3">Target Harian (3 Jam)</th>
-                    <th className="p-3 text-right">Total Jam Duty</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                  {loading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <tr key={i} className="animate-pulse">
-                        <td className="p-3"><div className="w-8 h-4 bg-slate-800/80 rounded-full"></div></td>
-                        <td className="p-3"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-28 h-5 bg-slate-800/80 rounded-full"></div></td>
-                        <td className="p-3 text-right"><div className="w-20 h-5 bg-slate-800/80 rounded-lg ml-auto"></div></td>
+            {/* TAB 1: REKAP PER TANGGAL (DAILY BREAKDOWN PER ANGGOTA) */}
+            {viewMode === 'daily' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-brand-400" />
+                    Rincian Duty Per Tanggal ({periodLabels[periodFilter]})
+                  </h3>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Total {dailyBreakdownList.length} Entri Tanggal
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+                      <tr>
+                        <th className="p-3">No</th>
+                        <th className="p-3">Tanggal Duty</th>
+                        <th className="p-3">Nama Anggota</th>
+                        <th className="p-3">Jabatan</th>
+                        <th className="p-3">Jumlah Sesi</th>
+                        <th className="p-3">Status Target (3 Jam)</th>
+                        <th className="p-3 text-right">Total Jam Duty Harian</th>
                       </tr>
-                    ))
-                  ) : memberLeaderboard.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-500">
-                        Belum ada data rekapitulasi jam duty untuk periode {periodLabels[periodFilter]}.
-                      </td>
-                    </tr>
-                  ) : (
-                    memberLeaderboard.map((m, idx) => {
-                      const isFulfilled = m.totalMin >= 180;
-                      return (
-                        <tr key={idx} className="hover:bg-slate-900/40">
-                          <td className="p-3">
-                            <span
-                              className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] font-mono ${
-                                idx === 0
-                                  ? 'bg-amber-400 text-black'
-                                  : idx === 1
-                                  ? 'bg-slate-300 text-black'
-                                  : idx === 2
-                                  ? 'bg-amber-700 text-white'
-                                  : 'bg-slate-800 text-slate-400'
-                              }`}
-                            >
-                              {idx + 1}
-                            </span>
-                          </td>
-                          <td className="p-3 font-bold text-slate-100">{m.name}</td>
-                          <td className="p-3 text-brand-400">{m.pos}</td>
-                          <td className="p-3 font-mono">{m.sessions} Sesi</td>
-                          <td className="p-3">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-                                isFulfilled
-                                  ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
-                                  : 'bg-red-950/80 text-red-400 border-red-500/40'
-                              }`}
-                            >
-                              {isFulfilled ? 'Terpenuhi (≥ 3 Jam)' : 'Belum Terpenuhi (< 3 Jam)'}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right font-mono font-extrabold text-emerald-400 text-sm">
-                            {formatDurationMinutes(m.totalMin)}
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                      {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="p-3"><div className="w-6 h-4 bg-slate-800/80 rounded"></div></td>
+                            <td className="p-3"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                            <td className="p-3"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                            <td className="p-3"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                            <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                            <td className="p-3"><div className="w-28 h-5 bg-slate-800/80 rounded-full"></div></td>
+                            <td className="p-3 text-right"><div className="w-20 h-5 bg-slate-800/80 rounded-lg ml-auto"></div></td>
+                          </tr>
+                        ))
+                      ) : dailyBreakdownList.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-500">
+                            Belum ada data duty per tanggal untuk periode {periodLabels[periodFilter]}.
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      ) : (
+                        dailyBreakdownList.map((item, idx) => {
+                          const isFulfilled = item.total_minutes >= 180;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-900/40">
+                              <td className="p-3 font-mono text-slate-500">{idx + 1}</td>
+                              <td className="p-3 font-bold text-brand-300 font-mono">
+                                {formatIndonesianDate(item.duty_in_time)}
+                              </td>
+                              <td className="p-3 font-bold text-slate-100">{item.discord_name}</td>
+                              <td className="p-3 text-slate-300">{item.position_name}</td>
+                              <td className="p-3 font-mono">{item.session_count} Sesi</td>
+                              <td className="p-3">
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                                    isFulfilled
+                                      ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
+                                      : 'bg-red-950/80 text-red-400 border-red-500/40'
+                                  }`}
+                                >
+                                  {isFulfilled ? 'Terpenuhi (≥ 3 Jam)' : 'Belum Terpenuhi (< 3 Jam)'}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right font-mono font-extrabold text-emerald-400 text-sm">
+                                {formatDurationMinutes(item.total_minutes)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: RINGKASAN AKUMULASI PERFORMA ANGGOTA */}
+            {viewMode === 'summary' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-amber-400" />
+                    Peringkat Akumulasi Performa Anggota ({periodLabels[periodFilter]})
+                  </h3>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+                      <tr>
+                        <th className="p-3">Peringkat</th>
+                        <th className="p-3">Nama Anggota</th>
+                        <th className="p-3">Jabatan</th>
+                        <th className="p-3">Jumlah Sesi</th>
+                        <th className="p-3">Target Harian (3 Jam)</th>
+                        <th className="p-3 text-right font-bold text-emerald-400">Total Akumulasi Duty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                      {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <tr key={i} className="animate-pulse">
+                            <td className="p-3"><div className="w-8 h-4 bg-slate-800/80 rounded-full"></div></td>
+                            <td className="p-3"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                            <td className="p-3"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                            <td className="p-3"><div className="w-16 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                            <td className="p-3"><div className="w-28 h-5 bg-slate-800/80 rounded-full"></div></td>
+                            <td className="p-3 text-right"><div className="w-20 h-5 bg-slate-800/80 rounded-lg ml-auto"></div></td>
+                          </tr>
+                        ))
+                      ) : memberLeaderboard.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-slate-500">
+                            Belum ada data rekapitulasi jam duty untuk periode {periodLabels[periodFilter]}.
+                          </td>
+                        </tr>
+                      ) : (
+                        memberLeaderboard.map((m, idx) => {
+                          const isFulfilled = m.totalMin >= 180;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-900/40">
+                              <td className="p-3">
+                                <span
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] font-mono ${
+                                    idx === 0
+                                      ? 'bg-amber-400 text-black'
+                                      : idx === 1
+                                      ? 'bg-slate-300 text-black'
+                                      : idx === 2
+                                      ? 'bg-amber-700 text-white'
+                                      : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                >
+                                  {idx + 1}
+                                </span>
+                              </td>
+                              <td className="p-3 font-bold text-slate-100">{m.name}</td>
+                              <td className="p-3 text-brand-400">{m.pos}</td>
+                              <td className="p-3 font-mono">{m.sessions} Sesi</td>
+                              <td className="p-3">
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                                    isFulfilled
+                                      ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
+                                      : 'bg-red-950/80 text-red-400 border-red-500/40'
+                                  }`}
+                                >
+                                  {isFulfilled ? 'Terpenuhi (≥ 3 Jam)' : 'Belum Terpenuhi (< 3 Jam)'}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right font-mono font-extrabold text-emerald-400 text-sm">
+                                {formatDurationMinutes(m.totalMin)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
