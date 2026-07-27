@@ -62,6 +62,13 @@ async function backupDatabase() {
     sqlDump += `-- Backup Date: ${new Date().toISOString()}\n`;
     sqlDump += `-- Database Source: ${process.env.DATABASE_URL}\n\n`;
 
+    // SystemSettings SQL
+    systemSettings.forEach((s) => {
+      const bg1 = s.login_background ? `'${s.login_background.replace(/'/g, "''")}'` : "''";
+      const bg2 = s.dashboard_background ? `'${s.dashboard_background.replace(/'/g, "''")}'` : "''";
+      sqlDump += `INSERT OR REPLACE INTO "SystemSettings" ("id", "company_name", "system_name", "logo", "favicon", "login_background", "dashboard_background", "primary_color", "secondary_color", "accent_color", "theme_mode", "require_duty_in_screenshot", "require_duty_out_screenshot", "max_upload_size_mb", "timezone", "system_active", "updated_at") VALUES ('${s.id}', '${s.company_name.replace(/'/g, "''")}', '${s.system_name.replace(/'/g, "''")}', '${s.logo.replace(/'/g, "''")}', '${s.favicon.replace(/'/g, "''")}', ${bg1}, ${bg2}, '${s.primary_color}', '${s.secondary_color}', '${s.accent_color}', '${s.theme_mode}', ${s.require_duty_in_screenshot ? 1 : 0}, ${s.require_duty_out_screenshot ? 1 : 0}, ${s.max_upload_size_mb}, '${s.timezone}', ${s.system_active ? 1 : 0}, '${s.updated_at.toISOString()}');\n`;
+    });
+
     // Positions SQL
     positions.forEach((p) => {
       const desc = p.description ? `'${p.description.replace(/'/g, "''")}'` : 'NULL';
@@ -89,6 +96,26 @@ async function backupDatabase() {
       sqlDump += `INSERT OR REPLACE INTO "Attendance" ("id", "user_id", "duty_in_time", "duty_out_time", "duration_minutes", "duty_in_screenshot", "duty_out_screenshot", "status", "user_note", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at", "deleted_at") VALUES ('${a.id}', '${a.user_id}', '${a.duty_in_time.toISOString()}', ${outTime}, ${dur}, '${a.duty_in_screenshot.replace(/'/g, "''")}', ${outSs}, '${a.status}', ${uNote}, ${aNote}, ${revBy}, ${revAt}, '${a.created_at.toISOString()}', '${a.updated_at.toISOString()}', ${delAt});\n`;
     });
 
+    // LeaveRequests SQL
+    leaveRequests.forEach((l) => {
+      const att = l.attachment ? `'${l.attachment.replace(/'/g, "''")}'` : 'NULL';
+      const aNote = l.admin_note ? `'${l.admin_note.replace(/'/g, "''")}'` : 'NULL';
+      const appBy = l.approved_by ? `'${l.approved_by}'` : 'NULL';
+      const appAt = l.approved_at ? `'${l.approved_at.toISOString()}'` : 'NULL';
+
+      sqlDump += `INSERT OR REPLACE INTO "LeaveRequest" ("id", "user_id", "leave_type", "start_date", "end_date", "reason", "attachment", "status", "admin_note", "approved_by", "approved_at", "created_at", "updated_at") VALUES ('${l.id}', '${l.user_id}', '${l.leave_type}', '${l.start_date.toISOString()}', '${l.end_date.toISOString()}', '${l.reason.replace(/'/g, "''")}', ${att}, '${l.status}', ${aNote}, ${appBy}, ${appAt}, '${l.created_at.toISOString()}', '${l.updated_at.toISOString()}');\n`;
+    });
+
+    // AuditLogs SQL
+    auditLogs.forEach((log) => {
+      const oldD = log.old_data ? `'${log.old_data.replace(/'/g, "''")}'` : 'NULL';
+      const newD = log.new_data ? `'${log.new_data.replace(/'/g, "''")}'` : 'NULL';
+      const ip = log.ip_address ? `'${log.ip_address}'` : 'NULL';
+      const ua = log.user_agent ? `'${log.user_agent.replace(/'/g, "''")}'` : 'NULL';
+
+      sqlDump += `INSERT OR REPLACE INTO "AuditLog" ("id", "admin_id", "action", "table_name", "record_id", "old_data", "new_data", "ip_address", "user_agent", "created_at") VALUES ('${log.id}', '${log.admin_id}', '${log.action}', '${log.table_name}', '${log.record_id}', ${oldD}, ${newD}, ${ip}, ${ua}, '${log.created_at.toISOString()}');\n`;
+    });
+
     const sqlPath = path.join(backupDir, `turso_db_backup_${timestampStr}.sql`);
     const latestSqlPath = path.join(backupDir, `latest_turso_db_backup.sql`);
 
@@ -96,17 +123,22 @@ async function backupDatabase() {
     fs.writeFileSync(latestSqlPath, sqlDump, 'utf-8');
 
     const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log('✅ BACKUP DATABASE BERHASIL!');
-    console.log(`⏱️ Durasi: ${durationSec} detik`);
-    console.log(`📂 Folder Backup: ${backupDir}`);
-    console.log(`📄 JSON Backup File: ${jsonPath}`);
-    console.log(`📄 SQL Backup File: ${sqlPath}`);
-    console.log(`📊 Total Data Ter-backup:`);
-    console.log(`   - Users/Anggota : ${users.length} akun`);
-    console.log(`   - Positions/Jabatan: ${positions.length} data`);
-    console.log(`   - Attendances/Absen: ${attendances.length} sesi`);
-    console.log(`   - Leave Requests : ${leaveRequests.length} pengajuan`);
-    console.log(`   - Audit Logs     : ${auditLogs.length} rekam jejak`);
+    console.log('====================================================');
+    console.log('✅ BACKUP DATABASE HARIAN BERHASIL EXECUTED!');
+    console.log('====================================================');
+    console.log(`⏱️ Waktu Eksekusi: ${durationSec} detik`);
+    console.log(`📂 Folder Lokasi Backup: ${backupDir}`);
+    console.log(`📄 File JSON Backup : ${jsonPath}`);
+    console.log(`📄 File SQL Backup  : ${sqlPath}`);
+    console.log(`----------------------------------------------------`);
+    console.log(`📊 RINGKASAN DATA TER-BACKUP:`);
+    console.log(`   • System Settings : ${systemSettings.length} konfigurasi`);
+    console.log(`   • Positions/Jabatan: ${positions.length} data`);
+    console.log(`   • Users/Anggota   : ${users.length} akun`);
+    console.log(`   • Attendances/Absen: ${attendances.length} sesi`);
+    console.log(`   • Leave Requests   : ${leaveRequests.length} pengajuan`);
+    console.log(`   • Audit Logs       : ${auditLogs.length} rekam jejak`);
+    console.log('====================================================');
 
   } catch (error) {
     console.error('❌ Gagal melakukan backup database:', error);
