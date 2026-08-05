@@ -36,12 +36,13 @@ export async function GET(request: Request) {
       where.is_active = is_active === 'true';
     }
 
-    const members = await prisma.user.findMany({
+    const rawMembers = await prisma.user.findMany({
       where,
       include: { position: true },
       orderBy: { created_at: 'desc' },
     });
 
+    const members = rawMembers.map(({ password_hash, ...rest }) => rest);
     const positions = await prisma.position.findMany({ orderBy: { name: 'asc' } });
 
     return NextResponse.json({ members, positions });
