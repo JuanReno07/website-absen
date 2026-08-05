@@ -47,13 +47,13 @@ export async function POST(request: Request) {
         ooc_name: ooc_name.trim(),
         steam_hex: steam_hex.trim(),
         role: 'MEMBER',
-        is_active: true,
+        is_active: false, // Requires Admin Activation
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Registrasi berhasil! Silakan login.',
+      message: 'Registrasi berhasil! Akun Anda membutuhkan persetujuan Admin sebelum dapat login.',
       user_id: newUser.id,
     });
   } catch (error: any) {
