@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { prisma } from './db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ase_roleplay_duty_secret_key_2026_super_secure';
+const JWT_SECRET = process.env.JWT_SECRET || 'ase_roleplay_duty_secret_key_2026_super_secure_harden_v2_' + (process.env.VERCEL_GIT_COMMIT_SHA || 'v2');
 const COOKIE_NAME = 'ase_duty_session';
 
 export interface UserSessionPayload {

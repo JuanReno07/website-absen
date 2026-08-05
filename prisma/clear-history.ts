@@ -7,10 +7,10 @@ async function clearMembers() {
 
   // Delete all attendance records
   await prisma.attendance.deleteMany({});
-  
+
   // Delete all leave requests
   await prisma.leaveRequest.deleteMany({});
-  
+
   // Delete all audit logs
   await prisma.auditLog.deleteMany({});
 
