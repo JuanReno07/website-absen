@@ -57,10 +57,11 @@ export default function UserReportsPage() {
   const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(null);
 
   const categories = [
-    'Laporan Kegiatan',
-    'Kejadian Lapangan',
+    'Laporan Kerja Harian',
+    'Patroli & Pengawasan',
+    'Penanganan Kasus / Pasien',
+    'Rapat & Koordinasi',
     'Kendala Teknis',
-    'Pelanggaran / Masalah',
     'Lainnya',
   ];
 
