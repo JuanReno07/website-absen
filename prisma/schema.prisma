@@ -26,6 +26,7 @@ model User {
 
   attendances   Attendance[]
   leave_requests LeaveRequest[]
+  reports       UserReport[]
   audit_logs    AuditLog[]   @relation("AdminLogs")
 
   @@index([position_id])
@@ -120,4 +121,23 @@ model AuditLog {
   created_at DateTime @default(now())
 
   @@index([admin_id])
+}
+
+model UserReport {
+  id          String    @id @default(cuid())
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title       String
+  category    String    @default("Laporan Kegiatan") // Laporan Kegiatan, Kejadian Lapangan, Kendala Teknis, Pelanggaran, Lainnya
+  content     String
+  screenshots String    // JSON stringified array of screenshot images
+  status      String    @default("MENUNGGU_DITANGGAPI") // MENUNGGU_DITANGGAPI, DIPROSES, SELESAI, DITOLAK
+  admin_note  String?
+  reviewed_by String?
+  reviewed_at DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([status])
 }
