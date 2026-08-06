@@ -1,5 +1,5 @@
 'use client';
-
+// Force Vercel rebuild for user reports route
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import {
