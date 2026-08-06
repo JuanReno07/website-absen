@@ -1,5 +1,7 @@
 'use client';
-// Force Vercel rebuild for reports route
+
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import AdminSidebar from '@/components/layout/AdminSidebar';
