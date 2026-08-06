@@ -25,7 +25,7 @@ export default function AdminSidebar() {
     { href: '/admin/positions', label: 'Jabatan Organisasi', icon: Briefcase },
     { href: '/admin/attendances', label: 'Data Absensi', icon: CalendarCheck },
     { href: '/admin/leaves', label: 'Persetujuan Izin', icon: Calendar },
-    { href: '/admin/reports', label: 'Laporan Anggota', icon: FileText },
+    { href: '/admin/reports', label: 'Laporan Kerja Harian', icon: FileText },
     { href: '/admin/recap', label: 'Rekap Jam & Ekspor', icon: FileSpreadsheet },
     { href: '/admin/audit-logs', label: 'Audit Log Trail', icon: ShieldAlert },
     { href: '/admin/settings', label: 'Branding & Theme', icon: Palette },

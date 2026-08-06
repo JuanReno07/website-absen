@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes requiring authentication
-  const protectedRoutes = ['/dashboard', '/duty-in', '/duty-out', '/history', '/leave', '/reports', '/profile', '/admin'];
+  const protectedRoutes = ['/dashboard', '/duty-in', '/duty-out', '/history', '/leave', '/reports', '/daily-report', '/profile', '/admin'];
 
   const isProtected = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -36,6 +36,8 @@ export const config = {
     '/leave/:path*',
     '/reports',
     '/reports/:path*',
+    '/daily-report',
+    '/daily-report/:path*',
     '/profile',
     '/profile/:path*',
     '/admin',
