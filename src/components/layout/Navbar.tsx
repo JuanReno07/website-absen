@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Shield,
   Calendar,
+  FileText,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -165,6 +166,7 @@ export default function Navbar({
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/history', label: 'Riwayat Duty', icon: History },
     { href: '/leave', label: 'Pengajuan Izin', icon: Calendar },
+    { href: '/reports', label: 'Laporan', icon: FileText },
     { href: '/profile', label: 'Profil Saya', icon: User },
   ];
 
