@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { signJwt, COOKIE_NAME } from '@/lib/auth';
+import { getClientIp, parseUserAgent } from '@/lib/device-parser';
 
 export async function POST(request: Request) {
   try {
@@ -42,6 +43,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Extract Client IP and User Agent Device Info
+    const ipAddress = getClientIp(request);
+    const userAgentStr = request.headers.get('user-agent') || '';
+    const parsedDevice = parseUserAgent(userAgentStr);
+    const tokenId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    // Create UserSession record
+    await prisma.userSession.create({
+      data: {
+        user_id: user.id,
+        token_id: tokenId,
+        ip_address: ipAddress,
+        device_type: parsedDevice.deviceType,
+        browser_name: parsedDevice.browserName,
+        os_name: parsedDevice.osName,
+        user_agent: userAgentStr,
+        is_active: true,
+      },
+    });
+
     // Update last login
     await prisma.user.update({
       where: { id: user.id },
@@ -57,6 +78,7 @@ export async function POST(request: Request) {
       steam_hex: user.steam_hex,
       position_id: user.position_id,
       session_version: user.session_version ?? 1,
+      token_id: tokenId,
     });
 
     const response = NextResponse.json({

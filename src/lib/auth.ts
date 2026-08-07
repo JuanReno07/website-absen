@@ -14,6 +14,7 @@ export interface UserSessionPayload {
   steam_hex: string;
   position_id: string;
   session_version?: number;
+  token_id?: string;
 }
 
 export function signJwt(payload: UserSessionPayload): string {
@@ -43,9 +44,26 @@ export async function getCurrentUser() {
 
   if (!user || !user.is_active) return null;
 
-  // Validate session version (if token version doesn't match current user version, session was kicked)
+  // Validate global session version (if token version doesn't match current user version, session was kicked)
   if (payload.session_version !== undefined && user.session_version !== payload.session_version) {
     return null;
+  }
+
+  // Validate stateful device session if token_id is set
+  if (payload.token_id) {
+    const dbSession = await prisma.userSession.findUnique({
+      where: { token_id: payload.token_id },
+    });
+
+    if (!dbSession || !dbSession.is_active) {
+      return null;
+    }
+
+    // Touch last_active timestamp (non-blocking catch)
+    prisma.userSession.update({
+      where: { id: dbSession.id },
+      data: { last_active: new Date() },
+    }).catch(() => {});
   }
 
   return user;
