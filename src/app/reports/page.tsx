@@ -92,6 +92,55 @@ export default function UserReportsPage() {
     }
   };
 
+  // Handle Paste (Ctrl + V) from Clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (activeTab !== 'create') return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const newScreenshots: string[] = [];
+      let processed = 0;
+      let totalImageItems = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          totalImageItems++;
+        }
+      }
+
+      if (totalImageItems === 0) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile();
+          if (blob) {
+            if (blob.size > 8 * 1024 * 1024) {
+              alert('Foto clipboard melebihi batas 8MB.');
+              continue;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target?.result) {
+                newScreenshots.push(event.target.result as string);
+              }
+              processed++;
+              if (processed === totalImageItems) {
+                setScreenshots((prev) => [...prev, ...newScreenshots]);
+              }
+            };
+            reader.readAsDataURL(blob);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [activeTab]);
+
   // Multiple File Upload Handler
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -364,11 +413,13 @@ export default function UserReportsPage() {
                     <div className="p-3 bg-red-600/10 rounded-full text-red-400 group-hover:scale-110 transition-transform">
                       <Upload className="w-6 h-6" />
                     </div>
-                    <p className="text-sm font-semibold text-slate-200">
-                      Klik atau seret foto screenshot ke sini
+                    <p className="text-sm font-semibold text-slate-200 flex items-center justify-center gap-1.5 flex-wrap">
+                      <span>Klik / Seret foto ke sini, atau tekan</span>
+                      <span className="text-red-400 font-mono bg-red-950/70 border border-red-800/60 px-2 py-0.5 rounded text-xs shadow-sm">Ctrl + V</span>
+                      <span>untuk Paste screenshot</span>
                     </p>
-                    <p className="text-xs text-slate-500">
-                      Format PNG, JPG, JPEG (Dapat memilih banyak foto sekaligus, Max 8MB per foto)
+                    <p className="text-xs text-slate-400">
+                      Mendukung screenshot instan (Win + Shift + S) & multi-file PNG/JPG (Max 8MB/foto)
                     </p>
                   </div>
                 </div>
