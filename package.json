@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
+    "db:push-cloud": "npx tsx scripts/sync-local-to-turso.ts",
     "db:backup": "npx tsx scripts/backup-db.ts"
   },
   "dependencies": {
