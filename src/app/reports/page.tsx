@@ -92,6 +92,66 @@ export default function UserReportsPage() {
     }
   };
 
+  // Unified File Processor (File Picker, Drag & Drop, Clipboard Paste)
+  const processFileList = (fileArray: File[]) => {
+    if (!fileArray || fileArray.length === 0) return;
+
+    const validFiles = fileArray.filter((file) => {
+      if (!file.type.startsWith('image/')) {
+        alert(`File "${file.name}" bukan format gambar yang valid.`);
+        return false;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        alert(`File "${file.name}" melebihi batas ukuran 8MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    const newScreenshots: string[] = [];
+    let processedCount = 0;
+
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          newScreenshots.push(event.target.result as string);
+        }
+        processedCount++;
+        if (processedCount === validFiles.length) {
+          setScreenshots((prev) => [...prev, ...newScreenshots]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Native Drag & Drop Handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFileList(Array.from(files));
+    }
+  };
+
+  // Multiple File Picker Handler
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      processFileList(Array.from(files));
+    }
+    e.target.value = '';
+  };
+
   // Handle Paste (Ctrl + V) from Clipboard
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -100,76 +160,25 @@ export default function UserReportsPage() {
       const items = e.clipboardData?.items;
       if (!items) return;
 
-      const newScreenshots: string[] = [];
-      let processed = 0;
-      let totalImageItems = 0;
+      const pastedFiles: File[] = [];
 
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
-          totalImageItems++;
+          const blob = items[i].getAsFile();
+          if (blob) {
+            pastedFiles.push(blob);
+          }
         }
       }
 
-      if (totalImageItems === 0) return;
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type.indexOf('image') !== -1) {
-          const blob = item.getAsFile();
-          if (blob) {
-            if (blob.size > 8 * 1024 * 1024) {
-              alert('Foto clipboard melebihi batas 8MB.');
-              continue;
-            }
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              if (event.target?.result) {
-                newScreenshots.push(event.target.result as string);
-              }
-              processed++;
-              if (processed === totalImageItems) {
-                setScreenshots((prev) => [...prev, ...newScreenshots]);
-              }
-            };
-            reader.readAsDataURL(blob);
-          }
-        }
+      if (pastedFiles.length > 0) {
+        processFileList(pastedFiles);
       }
     };
 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, [activeTab]);
-
-  // Multiple File Upload Handler
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const newScreenshots: string[] = [];
-    let processedCount = 0;
-
-    Array.from(files).forEach((file) => {
-      if (file.size > 8 * 1024 * 1024) {
-        alert(`File ${file.name} melebihi batas 8MB.`);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          newScreenshots.push(event.target.result as string);
-        }
-        processedCount++;
-        if (processedCount === files.length) {
-          setScreenshots((prev) => [...prev, ...newScreenshots]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    e.target.value = '';
-  };
 
   const removeScreenshot = (index: number) => {
     setScreenshots((prev) => prev.filter((_, i) => i !== index));
@@ -401,21 +410,25 @@ export default function UserReportsPage() {
                 </label>
 
                 {/* Upload Zone */}
-                <div className="relative border-2 border-dashed border-slate-700 hover:border-red-500/60 rounded-2xl p-6 text-center bg-slate-900/40 hover:bg-slate-900/80 transition-all group">
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className="relative border-2 border-dashed border-slate-700 hover:border-red-500/60 rounded-2xl p-6 text-center bg-slate-900/40 hover:bg-slate-900/80 transition-all group cursor-pointer"
+                >
                   <input
                     type="file"
                     accept="image/*"
                     multiple
                     onChange={handleImageUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                   />
-                  <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="flex flex-col items-center justify-center gap-2 pointer-events-none z-10">
                     <div className="p-3 bg-red-600/10 rounded-full text-red-400 group-hover:scale-110 transition-transform">
                       <Upload className="w-6 h-6" />
                     </div>
                     <p className="text-sm font-semibold text-slate-200 flex items-center justify-center gap-1.5 flex-wrap">
                       <span>Klik / Seret foto ke sini, atau tekan</span>
-                      <span className="text-red-400 font-mono bg-red-950/70 border border-red-800/60 px-2 py-0.5 rounded text-xs shadow-sm">Ctrl + V</span>
+                      <span className="text-red-400 font-mono bg-red-950/70 border border-red-800/60 px-2 py-0.5 rounded text-xs shadow-sm pointer-events-auto">Ctrl + V</span>
                       <span>untuk Paste screenshot</span>
                     </p>
                     <p className="text-xs text-slate-400">
