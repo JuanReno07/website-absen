@@ -168,6 +168,20 @@ async function syncLocalToTurso() {
         "updated_at" DATETIME NOT NULL,
         FOREIGN KEY ("user_id") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
       );`,
+      `CREATE TABLE IF NOT EXISTS "UserSession" (
+        "id" TEXT PRIMARY KEY,
+        "user_id" TEXT NOT NULL,
+        "token_id" TEXT NOT NULL UNIQUE,
+        "ip_address" TEXT,
+        "device_type" TEXT,
+        "browser_name" TEXT,
+        "os_name" TEXT,
+        "user_agent" TEXT,
+        "last_active" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "is_active" INTEGER NOT NULL DEFAULT 1,
+        "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("user_id") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );`,
       `CREATE INDEX IF NOT EXISTS "User_position_id_idx" ON "User"("position_id");`,
       `CREATE INDEX IF NOT EXISTS "User_steam_hex_idx" ON "User"("steam_hex");`,
       `CREATE INDEX IF NOT EXISTS "Attendance_user_id_idx" ON "Attendance"("user_id");`,
@@ -178,6 +192,8 @@ async function syncLocalToTurso() {
       `CREATE INDEX IF NOT EXISTS "AuditLog_admin_id_idx" ON "AuditLog"("admin_id");`,
       `CREATE INDEX IF NOT EXISTS "UserReport_user_id_idx" ON "UserReport"("user_id");`,
       `CREATE INDEX IF NOT EXISTS "UserReport_status_idx" ON "UserReport"("status");`,
+      `CREATE INDEX IF NOT EXISTS "UserSession_user_id_idx" ON "UserSession"("user_id");`,
+      `CREATE INDEX IF NOT EXISTS "UserSession_is_active_idx" ON "UserSession"("is_active");`,
     ];
 
     for (const ddl of ddlStatements) {
@@ -201,6 +217,7 @@ async function syncLocalToTurso() {
       systemSettings,
       auditLogs,
       reports,
+      userSessions,
     ] = await Promise.all([
       localPrisma.position.findMany(),
       localPrisma.user.findMany(),
@@ -209,6 +226,7 @@ async function syncLocalToTurso() {
       localPrisma.systemSettings.findMany(),
       localPrisma.auditLog.findMany(),
       localPrisma.userReport.findMany(),
+      localPrisma.userSession.findMany(),
     ]);
 
     console.log(`📊 Total Data Lokal:
@@ -218,12 +236,14 @@ async function syncLocalToTurso() {
   - Leave Requests : ${leaveRequests.length}
   - System Settings: ${systemSettings.length}
   - Audit Logs     : ${auditLogs.length}
-  - User Reports   : ${reports.length}`);
+  - User Reports   : ${reports.length}
+  - User Sessions  : ${userSessions.length}`);
 
     console.log('📤 3. Mengupload & Sinkronisasi data ke Turso Cloud DB...');
     await tursoClient.execute('PRAGMA foreign_keys = OFF;');
 
     // Clear existing data in Turso Cloud to ensure exact 1:1 match with local dev.db
+    await tursoClient.execute('DELETE FROM "UserSession";');
     await tursoClient.execute('DELETE FROM "UserReport";');
     await tursoClient.execute('DELETE FROM "AuditLog";');
     await tursoClient.execute('DELETE FROM "LeaveRequest";');
@@ -383,6 +403,27 @@ async function syncLocalToTurso() {
           r.reviewed_at ? r.reviewed_at.toISOString() : null,
           r.created_at.toISOString(),
           r.updated_at.toISOString(),
+        ],
+      });
+    }
+
+    // Sync UserSession
+    for (const sess of userSessions) {
+      await tursoClient.execute({
+        sql: `INSERT OR REPLACE INTO "UserSession" ("id", "user_id", "token_id", "ip_address", "device_type", "browser_name", "os_name", "user_agent", "last_active", "is_active", "created_at")
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          sess.id,
+          sess.user_id,
+          sess.token_id,
+          sess.ip_address,
+          sess.device_type,
+          sess.browser_name,
+          sess.os_name,
+          sess.user_agent,
+          sess.last_active.toISOString(),
+          sess.is_active ? 1 : 0,
+          sess.created_at.toISOString(),
         ],
       });
     }

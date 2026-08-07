@@ -29,6 +29,7 @@ model User {
   leave_requests LeaveRequest[]
   reports       UserReport[]
   audit_logs    AuditLog[]   @relation("AdminLogs")
+  user_sessions UserSession[]
 
   @@index([position_id])
   @@index([steam_hex])
@@ -141,4 +142,22 @@ model UserReport {
 
   @@index([user_id])
   @@index([status])
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  user_id      String
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token_id     String   @unique
+  ip_address   String?
+  device_type  String?  // Desktop, Mobile, Tablet
+  browser_name String?  // Chrome, Firefox, Safari, Edge, Opera
+  os_name      String?  // Windows, macOS, Android, iOS, Linux
+  user_agent   String?
+  last_active  DateTime @default(now())
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+
+  @@index([user_id])
+  @@index([is_active])
 }
