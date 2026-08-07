@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import AdminSidebar from '@/components/layout/AdminSidebar';
-import { Users, UserPlus, Edit2, Trash2, Shield, Search, Filter, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { Users, UserPlus, Edit2, Trash2, Shield, Search, Filter, AlertCircle, CheckCircle2, X, LogOut, Zap, UserX, ShieldAlert } from 'lucide-react';
 
 export default function AdminMembersPage() {
   const [user, setUser] = useState<any>(null);
@@ -36,6 +36,63 @@ export default function AdminMembersPage() {
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Kick Session State
+  const [kickTarget, setKickTarget] = useState<any | null>(null);
+  const [isKickModalOpen, setIsKickModalOpen] = useState(false);
+  const [isKickAllModalOpen, setIsKickAllModalOpen] = useState(false);
+  const [kicking, setKicking] = useState(false);
+  const [kickAlertMsg, setKickAlertMsg] = useState('');
+
+  const handleKickUser = async () => {
+    if (!kickTarget) return;
+    setKicking(true);
+    try {
+      const res = await fetch('/api/admin/kick-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: kickTarget.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Gagal menendang sesi pengguna.');
+        setKicking(false);
+        return;
+      }
+      setIsKickModalOpen(false);
+      setKickTarget(null);
+      setKickAlertMsg(data.message || 'Sesi pengguna berhasil di-kick.');
+      setTimeout(() => setKickAlertMsg(''), 4000);
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan saat menendang sesi.');
+    } finally {
+      setKicking(false);
+    }
+  };
+
+  const handleKickAll = async () => {
+    setKicking(true);
+    try {
+      const res = await fetch('/api/admin/kick-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kickAll: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Gagal menendang seluruh sesi pengguna.');
+        setKicking(false);
+        return;
+      }
+      setIsKickAllModalOpen(false);
+      setKickAlertMsg(data.message || 'Seluruh sesi pengguna berhasil di-kick.');
+      setTimeout(() => setKickAlertMsg(''), 4000);
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan saat menendang seluruh sesi.');
+    } finally {
+      setKicking(false);
+    }
+  };
 
   const fetchMembers = async () => {
     try {
@@ -181,14 +238,32 @@ export default function AdminMembersPage() {
               </p>
             </div>
 
-            <button
-              onClick={handleOpenAddModal}
-              className="px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-600/30 flex items-center gap-2 transition-all"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>TAMBAH ANGGOTA BARU</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsKickAllModalOpen(true)}
+                className="px-3.5 py-2.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-300 font-bold text-xs rounded-xl shadow-lg flex items-center gap-2 transition-all"
+                title="Tendang seluruh pengguna yang sedang login sekaligus"
+              >
+                <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span>KICK SEMUA SESSION</span>
+              </button>
+
+              <button
+                onClick={handleOpenAddModal}
+                className="px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-600/30 flex items-center gap-2 transition-all"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>TAMBAH ANGGOTA BARU</span>
+              </button>
+            </div>
           </div>
+
+          {kickAlertMsg && (
+            <div className="p-3 bg-emerald-950 border border-emerald-800 text-emerald-300 text-xs font-semibold rounded-2xl flex items-center gap-2 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>{kickAlertMsg}</span>
+            </div>
+          )}
 
           {/* Filters Bar */}
           <div className="glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3">
@@ -309,6 +384,13 @@ export default function AdminMembersPage() {
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => { setKickTarget(m); setIsKickModalOpen(true); }}
+                            className="px-3 py-1.5 bg-amber-950/40 hover:bg-amber-900/70 border border-amber-800/50 text-amber-400 hover:text-amber-300 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                            title="Kick sesi login user ini"
+                          >
+                            <LogOut className="w-3.5 h-3.5" /> Kick
+                          </button>
                           <button
                             onClick={() => handleOpenEditModal(m)}
                             className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
@@ -519,6 +601,97 @@ export default function AdminMembersPage() {
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 {deleting ? 'Menghapus...' : 'Ya, Hapus Permanen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kick Single Session Modal */}
+      {isKickModalOpen && kickTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative max-w-md w-full bg-slate-900 border border-amber-800/50 rounded-3xl overflow-hidden shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div className="w-10 h-10 rounded-full bg-amber-950 border border-amber-800/50 flex items-center justify-center">
+                <UserX className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-100">Kick Sesi Pengguna</h3>
+                <p className="text-xs text-slate-400">Putuskan sesi login aktif akun ini</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-amber-950/30 border border-amber-800/30 rounded-2xl space-y-2">
+              <p className="text-xs text-slate-200">
+                Apakah Anda yakin ingin menendang sesi login aktif untuk anggota berikut?
+              </p>
+              <div className="text-xs space-y-1 text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                <p><span className="text-slate-500">Discord:</span> <span className="font-bold text-white">{kickTarget.discord_name}</span></p>
+                <p><span className="text-slate-500">Username:</span> <span className="font-mono">@{kickTarget.username}</span></p>
+                <p><span className="text-slate-500">Jabatan:</span> <span className="text-brand-400 font-bold">{kickTarget.position?.name}</span></p>
+              </div>
+              <p className="text-[11px] text-amber-300 font-semibold mt-2">
+                ⚡ Pengguna ini akan langsung ter-logout otomatis saat melakukan aksi/refresh halaman berikutnya.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => { setIsKickModalOpen(false); setKickTarget(null); }}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleKickUser}
+                disabled={kicking}
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-600/30 text-xs flex items-center gap-2 disabled:opacity-50 transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                {kicking ? 'Menendang Sesi...' : 'Ya, Kick Sesi Sekarang'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kick All Sessions Modal */}
+      {isKickAllModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative max-w-md w-full bg-slate-900 border border-red-800/60 rounded-3xl overflow-hidden shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div className="w-10 h-10 rounded-full bg-red-950 border border-red-800/50 flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-100">Kick Seluruh Session (Purge All)</h3>
+                <p className="text-xs text-slate-400">Tindakan Darurat Keamanan</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-2xl space-y-2">
+              <p className="text-xs text-slate-200">
+                Apakah Anda yakin ingin menendang <strong>SELURUH pengguna</strong> yang sedang login di sistem saat ini?
+              </p>
+              <p className="text-[11px] text-red-300 font-semibold mt-2">
+                🚨 PERINGATAN: Semua anggota (termasuk Anda jika tidak Re-Login) yang sedang membuka aplikasi akan langsung dikeluarkan ke halaman Login secara serentak.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setIsKickAllModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleKickAll}
+                disabled={kicking}
+                className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-600/30 text-xs flex items-center gap-2 disabled:opacity-50 transition-all"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                {kicking ? 'Memproses Purge All...' : 'Ya, Kick Semua Session'}
               </button>
             </div>
           </div>

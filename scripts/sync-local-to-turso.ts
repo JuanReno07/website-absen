@@ -72,6 +72,7 @@ async function syncLocalToTurso() {
         "steam_hex" TEXT NOT NULL UNIQUE,
         "avatar" TEXT,
         "role" TEXT NOT NULL DEFAULT 'MEMBER',
+        "session_version" INTEGER NOT NULL DEFAULT 1,
         "is_active" INTEGER NOT NULL DEFAULT 1,
         "last_login_at" DATETIME,
         "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -182,6 +183,13 @@ async function syncLocalToTurso() {
     for (const ddl of ddlStatements) {
       await tursoClient.execute(ddl);
     }
+
+    try {
+      await tursoClient.execute('ALTER TABLE "User" ADD COLUMN "session_version" INTEGER NOT NULL DEFAULT 1;');
+    } catch (e) {
+      // Column session_version already exists
+    }
+
     console.log('✅ Skema tabel Turso telah berhasil disinkronkan.');
 
     console.log('📥 2. Membaca data dari SQLite Lokal (prisma/dev.db)...');
@@ -268,8 +276,8 @@ async function syncLocalToTurso() {
     // Sync User
     for (const u of users) {
       await tursoClient.execute({
-        sql: `INSERT OR REPLACE INTO "User" ("id", "username", "password_hash", "discord_name", "position_id", "ooc_name", "steam_hex", "avatar", "role", "is_active", "last_login_at", "created_at", "updated_at")
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT OR REPLACE INTO "User" ("id", "username", "password_hash", "discord_name", "position_id", "ooc_name", "steam_hex", "avatar", "role", "session_version", "is_active", "last_login_at", "created_at", "updated_at")
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           u.id,
           u.username,
@@ -280,6 +288,7 @@ async function syncLocalToTurso() {
           u.steam_hex,
           u.avatar,
           u.role,
+          (u as any).session_version ?? 1,
           u.is_active ? 1 : 0,
           u.last_login_at ? u.last_login_at.toISOString() : null,
           u.created_at.toISOString(),
