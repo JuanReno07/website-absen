@@ -13,6 +13,7 @@ export interface UserSessionPayload {
   ooc_name: string;
   steam_hex: string;
   position_id: string;
+  session_version?: number;
 }
 
 export function signJwt(payload: UserSessionPayload): string {
@@ -41,6 +42,12 @@ export async function getCurrentUser() {
   });
 
   if (!user || !user.is_active) return null;
+
+  // Validate session version (if token version doesn't match current user version, session was kicked)
+  if (payload.session_version !== undefined && user.session_version !== payload.session_version) {
+    return null;
+  }
+
   return user;
 }
 

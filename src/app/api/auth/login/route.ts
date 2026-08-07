@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       ooc_name: user.ooc_name,
       steam_hex: user.steam_hex,
       position_id: user.position_id,
+      session_version: user.session_version ?? 1,
     });
 
     const response = NextResponse.json({

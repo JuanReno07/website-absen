@@ -19,6 +19,7 @@ model User {
   steam_hex     String       @unique
   avatar        String?
   role          String       @default("MEMBER") // ADMIN, MEMBER
+  session_version Int        @default(1)
   is_active     Boolean      @default(true)
   last_login_at DateTime?
   created_at    DateTime     @default(now())
