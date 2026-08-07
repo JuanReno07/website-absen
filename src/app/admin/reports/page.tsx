@@ -195,7 +195,7 @@ export default function AdminReportsPage() {
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col">
       <Navbar user={user} activeDuty={null} />
 
-      <div className="flex-1 flex flex-col lg:flex-row max-w-7xl w-full mx-auto px-4 py-8 gap-8">
+      <div className="flex-1 flex flex-col lg:flex-row w-full px-4 sm:px-6 lg:px-8 py-8 gap-6 lg:gap-8">
         <AdminSidebar />
 
         <main className="flex-1 min-w-0">
@@ -277,7 +277,7 @@ export default function AdminReportsPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
+                <table className="w-full text-left text-sm text-slate-300 min-w-[950px]">
                   <thead className="bg-slate-900/90 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">
                     <tr>
                       <th className="px-4 py-3.5 text-center">No</th>
