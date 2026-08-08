@@ -23,7 +23,7 @@ export default function LoginPage() {
       try {
         localStorage.removeItem('ase_system_logo');
         localStorage.removeItem('ase_system_name');
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Fetch public settings real-time directly from Database API
@@ -37,7 +37,7 @@ export default function LoginPage() {
           setCurrentSystemName(settings.system_name);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Auth check redirect if already logged in
     fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
@@ -47,7 +47,7 @@ export default function LoginPage() {
           router.push('/dashboard');
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,7 +83,7 @@ export default function LoginPage() {
       if (typeof window !== 'undefined' && data.user) {
         try {
           localStorage.setItem('ase_user_session', JSON.stringify(data.user));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       router.push('/dashboard');
@@ -119,7 +119,7 @@ export default function LoginPage() {
               {currentSystemName}
             </h1>
             <p className="text-xs text-brand-400 font-bold uppercase tracking-wider mt-1">
-              ASE ROLEPLAY • ASE GROUP
+              ASE ROLEPLAY • POWERED BY ASE GROUP
             </p>
           </div>
         </div>
