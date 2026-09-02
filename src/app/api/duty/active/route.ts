@@ -14,43 +14,40 @@ export async function GET() {
       );
     }
 
-    const activeDuty = await prisma.attendance.findFirst({
-      where: {
-        user_id: user.id,
-        status: 'SEDANG_DUTY',
-      },
-    });
-
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Sum completed duration today
-    const todayDuties = await prisma.attendance.aggregate({
-      where: {
-        user_id: user.id,
-        status: 'DUTY_SELESAI',
-        duty_in_time: { gte: startOfToday },
-      },
-      _sum: { duration_minutes: true },
-    });
-
-    // Sum completed duration this month
-    const monthDuties = await prisma.attendance.aggregate({
-      where: {
-        user_id: user.id,
-        status: 'DUTY_SELESAI',
-        duty_in_time: { gte: startOfMonth },
-      },
-      _sum: { duration_minutes: true },
-    });
-
-    // Recent 5 personal duty logs
-    const recentHistory = await prisma.attendance.findMany({
-      where: { user_id: user.id },
-      orderBy: { duty_in_time: 'desc' },
-      take: 5,
-    });
+    // Run all database queries in parallel for ultra-fast single round-trip response
+    const [activeDuty, todayDuties, monthDuties, recentHistory] = await Promise.all([
+      prisma.attendance.findFirst({
+        where: {
+          user_id: user.id,
+          status: 'SEDANG_DUTY',
+        },
+      }),
+      prisma.attendance.aggregate({
+        where: {
+          user_id: user.id,
+          status: 'DUTY_SELESAI',
+          duty_in_time: { gte: startOfToday },
+        },
+        _sum: { duration_minutes: true },
+      }),
+      prisma.attendance.aggregate({
+        where: {
+          user_id: user.id,
+          status: 'DUTY_SELESAI',
+          duty_in_time: { gte: startOfMonth },
+        },
+        _sum: { duration_minutes: true },
+      }),
+      prisma.attendance.findMany({
+        where: { user_id: user.id },
+        orderBy: { duty_in_time: 'desc' },
+        take: 5,
+      }),
+    ]);
 
     return NextResponse.json({
       authenticated: true,

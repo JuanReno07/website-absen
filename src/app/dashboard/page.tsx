@@ -41,7 +41,11 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setErrorState(false);
-      const authRes = await fetch('/api/auth/me');
+      const [authRes, dutyRes] = await Promise.all([
+        fetch('/api/auth/me'),
+        fetch('/api/duty/active'),
+      ]);
+
       const authData = await authRes.json();
 
       if (!authData || !authData.authenticated) {
@@ -51,10 +55,8 @@ export default function DashboardPage() {
       }
       setUser(authData.user);
 
-      const dutyRes = await fetch('/api/duty/active');
-      const dutyData = await dutyRes.json();
-
       if (dutyRes.ok) {
+        const dutyData = await dutyRes.json();
         setActiveDuty(dutyData.activeDuty);
         setTodayTotalMinutes(dutyData.todayTotalMinutes || 0);
         setMonthTotalMinutes(dutyData.monthTotalMinutes || 0);
