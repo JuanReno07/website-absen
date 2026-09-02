@@ -17,6 +17,18 @@ export async function GET() {
   try {
     settings = await prisma.systemSettings.findFirst({
       where: { id: 'default' },
+      select: {
+        id: true,
+        company_name: true,
+        system_name: true,
+        logo: true,
+        favicon: true,
+        primary_color: true,
+        secondary_color: true,
+        accent_color: true,
+        theme_mode: true,
+        timezone: true,
+      },
     });
   } catch (e) {
     console.error('Error fetching system settings:', e);

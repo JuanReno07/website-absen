@@ -8,7 +8,10 @@ export async function generateMetadata(): Promise<Metadata> {
   let favicon = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
 
   try {
-    const settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
+    const settings = await prisma.systemSettings.findFirst({
+      where: { id: 'default' },
+      select: { system_name: true, logo: true, favicon: true },
+    });
     if (settings?.system_name) title = settings.system_name;
     if (settings?.logo) {
       favicon = settings.logo;
@@ -34,7 +37,16 @@ export default async function RootLayout({
 }) {
   let settings = null;
   try {
-    settings = await prisma.systemSettings.findFirst({ where: { id: 'default' } });
+    settings = await prisma.systemSettings.findFirst({
+      where: { id: 'default' },
+      select: {
+        logo: true,
+        primary_color: true,
+        secondary_color: true,
+        accent_color: true,
+        theme_mode: true,
+      },
+    });
   } catch (e) {}
 
   return (
