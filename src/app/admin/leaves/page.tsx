@@ -5,7 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import ScreenshotModal from '@/components/duty/ScreenshotModal';
 import { Calendar, Search, CheckCircle, XCircle, ExternalLink, Filter, X } from 'lucide-react';
-import { formatIndonesianDate } from '@/lib/utils';
+import { formatIndonesianDate, formatDateDMY } from '@/lib/utils';
 
 export default function AdminLeavesPage() {
   const [user, setUser] = useState<any>(null);
@@ -174,8 +174,8 @@ export default function AdminLeavesPage() {
                         <td className="p-3 font-bold text-slate-100">{l.user.discord_name}</td>
                         <td className="p-3 text-brand-400 font-semibold">{l.user.position.name}</td>
                         <td className="p-3 font-bold">{l.leave_type}</td>
-                        <td className="p-3 font-mono text-[11px]">
-                          {formatIndonesianDate(l.start_date)} - {formatIndonesianDate(l.end_date)}
+                        <td className="p-3 font-semibold text-xs text-slate-200 whitespace-nowrap">
+                          {formatDateDMY(l.start_date)} - {formatDateDMY(l.end_date)}
                         </td>
                         <td className="p-3 max-w-xs truncate text-slate-300">
                           {l.reason}

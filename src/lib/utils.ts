@@ -66,6 +66,19 @@ export function formatIndonesianDateTime(dateInput: string | Date | null | undef
   return `${formatIndonesianDate(dateInput)}, ${formatIndonesianTime(dateInput)}`;
 }
 
+/**
+ * Formats a Date strictly to DD/MM/YYYY (e.g. "03/09/2026")
+ */
+export function formatDateDMY(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return '-';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '-';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 export const DUTY_STATUS_CONFIG: Record<
   string,
   { label: string; bgClass: string; textClass: string; borderClass: string }
