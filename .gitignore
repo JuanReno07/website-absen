@@ -37,6 +37,7 @@ yarn-error.log*
 next-env.d.ts
 
 # local database backups
-/backups/*.json
-/backups/*.sql
+/backups/*
 !/backups/.gitkeep
+*.sqlite
+*.db

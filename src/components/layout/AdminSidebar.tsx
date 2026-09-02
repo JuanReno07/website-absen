@@ -39,6 +39,7 @@ export default function AdminSidebar() {
         </span>
         <Link
           href="/dashboard"
+          prefetch={false}
           className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -54,6 +55,7 @@ export default function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 isActive
                   ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-bold'

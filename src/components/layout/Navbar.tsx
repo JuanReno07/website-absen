@@ -181,7 +181,7 @@ export default function Navbar({
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
           {/* Logo & System Name */}
-          <Link href={currentUser ? '/dashboard' : '/login'} className="flex items-center gap-3 group shrink-0">
+          <Link href={currentUser ? '/dashboard' : '/login'} prefetch={false} className="flex items-center gap-3 group shrink-0">
             {/* Outer Spinning Glow Ring Container */}
             <div className="relative p-[2px] rounded-2xl bg-gradient-to-r from-red-600 via-amber-500 to-red-600 shadow-lg shadow-red-600/30 overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-amber-400 to-red-700 animate-spin-slow opacity-80"></div>
@@ -219,6 +219,7 @@ export default function Navbar({
                   <Link
                     key={link.href}
                     href={link.href}
+                    prefetch={false}
                     className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                       isActive
                         ? 'bg-slate-800 text-brand-400 border border-brand-500/40 shadow-sm'
@@ -240,6 +241,7 @@ export default function Navbar({
               {activeDuty ? (
                 <Link
                   href="/duty-out"
+                  prefetch={false}
                   className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 text-emerald-400 text-xs font-extrabold animate-pulse hover:bg-emerald-900/80 transition-colors shadow-lg shadow-emerald-950/50 whitespace-nowrap"
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -248,6 +250,7 @@ export default function Navbar({
               ) : (
                 <Link
                   href="/duty-in"
+                  prefetch={false}
                   className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-brand-600 to-red-700 hover:from-brand-500 hover:to-red-600 text-white text-xs font-extrabold shadow-lg shadow-brand-600/30 transition-all whitespace-nowrap"
                 >
                   <Clock className="w-3.5 h-3.5" />
@@ -285,6 +288,7 @@ export default function Navbar({
           ) : isPublicPage ? (
             <Link
               href="/login"
+              prefetch={false}
               className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-extrabold rounded-xl shadow-md transition-all whitespace-nowrap"
             >
               Login
@@ -323,6 +327,7 @@ export default function Navbar({
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={false}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
                     isActive
