@@ -18,12 +18,19 @@ export async function GET() {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Run all database queries in parallel for ultra-fast single round-trip response
+    // Run all database queries in parallel for ultra-fast single round-trip response (< 1KB payload)
     const [activeDuty, todayDuties, monthDuties, recentHistory] = await Promise.all([
       prisma.attendance.findFirst({
         where: {
           user_id: user.id,
           status: 'SEDANG_DUTY',
+        },
+        select: {
+          id: true,
+          user_id: true,
+          duty_in_time: true,
+          status: true,
+          user_note: true,
         },
       }),
       prisma.attendance.aggregate({
@@ -46,6 +53,16 @@ export async function GET() {
         where: { user_id: user.id },
         orderBy: { duty_in_time: 'desc' },
         take: 5,
+        select: {
+          id: true,
+          user_id: true,
+          duty_in_time: true,
+          duty_out_time: true,
+          duration_minutes: true,
+          status: true,
+          user_note: true,
+          admin_note: true,
+        },
       }),
     ]);
 

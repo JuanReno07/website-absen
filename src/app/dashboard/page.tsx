@@ -348,15 +348,14 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="p-3 text-right">
-                          {item.duty_in_screenshot && (
-                            <button
-                              onClick={() => setSelectedScreenshot(item.duty_in_screenshot)}
-                              className="p-1.5 text-slate-400 hover:text-brand-400 bg-slate-900 border border-slate-800 rounded-lg transition-colors"
-                              title="Lihat Screenshot IN"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <Link
+                            href="/history"
+                            prefetch={false}
+                            className="p-1.5 text-slate-400 hover:text-brand-400 bg-slate-900 border border-slate-800 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Lihat Detail Riwayat & Bukti"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
                         </td>
                       </tr>
                     );

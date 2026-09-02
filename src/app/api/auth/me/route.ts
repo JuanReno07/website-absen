@@ -44,6 +44,9 @@ export async function GET() {
       accent_color: '#EF4444',
       theme_mode: 'BRANDED',
     } as any;
+  } else if (settings.logo && settings.logo.startsWith('data:')) {
+    // Substitute huge base64 string with ultra-fast cached static asset path to keep network payload < 1KB
+    settings.logo = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
   }
 
   if (!user) {
@@ -67,7 +70,7 @@ export async function GET() {
       discord_name: user.discord_name,
       ooc_name: user.ooc_name,
       steam_hex: user.steam_hex,
-      avatar: user.avatar,
+      avatar: user.avatar && !user.avatar.startsWith('data:') ? user.avatar : null,
       position_id: user.position_id,
       position_name: user.position?.name || 'Anggota',
     },

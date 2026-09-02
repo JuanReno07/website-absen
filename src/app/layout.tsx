@@ -10,11 +10,11 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     const settings = await prisma.systemSettings.findFirst({
       where: { id: 'default' },
-      select: { system_name: true, logo: true, favicon: true },
+      select: { system_name: true, favicon: true },
     });
     if (settings?.system_name) title = settings.system_name;
-    if (settings?.logo) {
-      favicon = settings.logo;
+    if (settings?.favicon && !settings.favicon.startsWith('data:')) {
+      favicon = settings.favicon;
     }
   } catch (e) {}
 
@@ -40,7 +40,6 @@ export default async function RootLayout({
     settings = await prisma.systemSettings.findFirst({
       where: { id: 'default' },
       select: {
-        logo: true,
         primary_color: true,
         secondary_color: true,
         accent_color: true,
@@ -54,7 +53,7 @@ export default async function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="icon" href={settings?.logo || '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png'} />
+        <link rel="icon" href="/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png" />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
           rel="stylesheet"
