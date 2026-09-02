@@ -250,7 +250,7 @@ export default function AdminRecapPage() {
                 className="pt-3 border-t border-slate-800 flex flex-wrap items-center gap-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-semibold">Dari Tanggal:</span>
+                  <span className="text-xs text-slate-400 font-semibold">Dari Tanggal (DD/MM/YYYY):</span>
                   <input
                     type="date"
                     value={startDate}
@@ -261,7 +261,7 @@ export default function AdminRecapPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-semibold">Sampai Tanggal:</span>
+                  <span className="text-xs text-slate-400 font-semibold">Sampai Tanggal (DD/MM/YYYY):</span>
                   <input
                     type="date"
                     value={endDate}

@@ -5,7 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import ClipboardUploadArea from '@/components/duty/ClipboardUploadArea';
 import ScreenshotModal from '@/components/duty/ScreenshotModal';
 import { Calendar, FileText, Send, CheckCircle2, AlertCircle, Clock, ExternalLink } from 'lucide-react';
-import { formatIndonesianDate } from '@/lib/utils';
+import { formatIndonesianDate, formatDateDMY } from '@/lib/utils';
 
 export default function MemberLeavePage() {
   const [user, setUser] = useState<any>(null);
@@ -167,7 +167,10 @@ export default function MemberLeavePage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 uppercase mb-1">Tanggal Mulai</label>
+                <label className="block font-bold text-slate-300 uppercase mb-1 flex items-center justify-between">
+                  <span>Tanggal Mulai</span>
+                  <span className="text-[10px] text-brand-400 font-semibold tracking-wider">DD/MM/YYYY</span>
+                </label>
                 <input
                   type="date"
                   value={startDate}
@@ -176,10 +179,18 @@ export default function MemberLeavePage() {
                   required
                   className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-medium cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500 transition-colors"
                 />
+                {startDate && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Format: <span className="text-emerald-400 font-bold">{formatDateDMY(startDate)}</span>
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 uppercase mb-1">Tanggal Selesai</label>
+                <label className="block font-bold text-slate-300 uppercase mb-1 flex items-center justify-between">
+                  <span>Tanggal Selesai</span>
+                  <span className="text-[10px] text-brand-400 font-semibold tracking-wider">DD/MM/YYYY</span>
+                </label>
                 <input
                   type="date"
                   value={endDate}
@@ -188,6 +199,11 @@ export default function MemberLeavePage() {
                   required
                   className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-medium cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500 transition-colors"
                 />
+                {endDate && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Format: <span className="text-emerald-400 font-bold">{formatDateDMY(endDate)}</span>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -250,8 +266,8 @@ export default function MemberLeavePage() {
                     {leaveRequests.map((l) => (
                       <tr key={l.id} className="hover:bg-slate-900/40">
                         <td className="p-3 font-bold text-brand-400">{l.leave_type}</td>
-                        <td className="p-3 font-mono text-[11px]">
-                          {formatIndonesianDate(l.start_date)} - {formatIndonesianDate(l.end_date)}
+                        <td className="p-3 font-semibold text-xs text-slate-200 whitespace-nowrap">
+                          {formatDateDMY(l.start_date)} - {formatDateDMY(l.end_date)}
                         </td>
                         <td className="p-3 max-w-xs truncate text-slate-300">
                           {l.reason}
