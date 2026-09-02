@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateAttendanceExcel } from '@/lib/excel';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     await requireAdmin();

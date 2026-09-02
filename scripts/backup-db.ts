@@ -14,6 +14,8 @@ async function backupDatabase() {
       attendances,
       leaveRequests,
       auditLogs,
+      userReports,
+      userSessions,
     ] = await Promise.all([
       prisma.systemSettings.findMany(),
       prisma.position.findMany(),
@@ -21,12 +23,14 @@ async function backupDatabase() {
       prisma.attendance.findMany({ include: { user: { include: { position: true } } } }),
       prisma.leaveRequest.findMany({ include: { user: { include: { position: true } } } }),
       prisma.auditLog.findMany({ include: { admin: true } }),
+      prisma.userReport.findMany({ include: { user: { include: { position: true } } } }),
+      prisma.userSession.findMany({ include: { user: true } }),
     ]);
 
     const backupData = {
       timestamp: new Date().toISOString(),
       formatted_date: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
-      database_source: process.env.DATABASE_URL || 'Turso Cloud DB',
+      database_source: process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || 'Local / Turso DB',
       stats: {
         total_settings: systemSettings.length,
         total_positions: positions.length,
@@ -34,6 +38,8 @@ async function backupDatabase() {
         total_attendances: attendances.length,
         total_leave_requests: leaveRequests.length,
         total_audit_logs: auditLogs.length,
+        total_reports: userReports.length,
+        total_sessions: userSessions.length,
       },
       data: {
         systemSettings,
@@ -42,6 +48,8 @@ async function backupDatabase() {
         attendances,
         leaveRequests,
         auditLogs,
+        userReports,
+        userSessions,
       },
     };
 
@@ -51,16 +59,24 @@ async function backupDatabase() {
     }
 
     const timestampStr = new Date().toISOString().replace(/[:.]/g, '-');
-    const jsonPath = path.join(backupDir, `turso_db_backup_${timestampStr}.json`);
-    const latestJsonPath = path.join(backupDir, `latest_turso_db_backup.json`);
+    const jsonPath = path.join(backupDir, `db_backup_${timestampStr}.json`);
+    const latestJsonPath = path.join(backupDir, `latest_db_backup.json`);
 
     fs.writeFileSync(jsonPath, JSON.stringify(backupData, null, 2), 'utf-8');
     fs.writeFileSync(latestJsonPath, JSON.stringify(backupData, null, 2), 'utf-8');
 
+    // Also backup local dev.db file if exists
+    const localDevDbPath = path.join(process.cwd(), 'prisma', 'dev.db');
+    if (fs.existsSync(localDevDbPath)) {
+      fs.copyFileSync(localDevDbPath, path.join(backupDir, `dev_db_backup_${timestampStr}.sqlite`));
+      fs.copyFileSync(localDevDbPath, path.join(backupDir, `latest_dev.db`));
+      console.log('📦 File dev.db lokal juga berhasil dicopy ke folder backups.');
+    }
+
     // Generate SQL Insert Dump
-    let sqlDump = `-- TURSO CLOUD DATABASE BACKUP DUMP\n`;
+    let sqlDump = `-- DATABASE BACKUP DUMP\n`;
     sqlDump += `-- Backup Date: ${new Date().toISOString()}\n`;
-    sqlDump += `-- Database Source: ${process.env.DATABASE_URL}\n\n`;
+    sqlDump += `-- Database Source: ${process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || 'Database'}\n\n`;
 
     // SystemSettings SQL
     systemSettings.forEach((s) => {
@@ -93,7 +109,7 @@ async function backupDatabase() {
       const revAt = a.reviewed_at ? `'${a.reviewed_at.toISOString()}'` : 'NULL';
       const delAt = a.deleted_at ? `'${a.deleted_at.toISOString()}'` : 'NULL';
 
-      sqlDump += `INSERT OR REPLACE INTO "Attendance" ("id", "user_id", "duty_in_time", "duty_out_time", "duration_minutes", "duty_in_screenshot", "duty_out_screenshot", "status", "user_note", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at", "deleted_at") VALUES ('${a.id}', '${a.user_id}', '${a.duty_in_time.toISOString()}', ${outTime}, ${dur}, '${a.duty_in_screenshot.replace(/'/g, "''")}', ${outSs}, '${a.status}', ${uNote}, ${aNote}, ${revBy}, ${revAt}, '${a.created_at.toISOString()}', '${a.updated_at.toISOString()}', ${delAt});\n`;
+      sqlDump += `INSERT OR REPLACE INTO "Attendance" ("id", "user_id", "duty_in_time", "duty_out_time", "duration_minutes", "duty_in_screenshot", "duty_out_screenshot", "status", "user_note", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at", "deleted_at") VALUES ('${a.id}', '${a.user_id}', '${a.duty_in_time.toISOString()}', ${outTime}, ${dur}, '${a.duty_in_screenshot.replace(/'/g, "''")}', ${outSs}, '${a.status}', ${uNote}, ${aNote}, ${revBy}, ${revAt}, '${a.created_at.toISOString()}', '${a.updated_at.toISOString()}');\n`;
     });
 
     // LeaveRequests SQL
@@ -116,8 +132,17 @@ async function backupDatabase() {
       sqlDump += `INSERT OR REPLACE INTO "AuditLog" ("id", "admin_id", "action", "table_name", "record_id", "old_data", "new_data", "ip_address", "user_agent", "created_at") VALUES ('${log.id}', '${log.admin_id}', '${log.action}', '${log.table_name}', '${log.record_id}', ${oldD}, ${newD}, ${ip}, ${ua}, '${log.created_at.toISOString()}');\n`;
     });
 
-    const sqlPath = path.join(backupDir, `turso_db_backup_${timestampStr}.sql`);
-    const latestSqlPath = path.join(backupDir, `latest_turso_db_backup.sql`);
+    // UserReports SQL
+    userReports.forEach((r) => {
+      const scr = r.screenshots ? `'${r.screenshots.replace(/'/g, "''")}'` : "'[]'";
+      const aNote = r.admin_note ? `'${r.admin_note.replace(/'/g, "''")}'` : 'NULL';
+      const revBy = r.reviewed_by ? `'${r.reviewed_by}'` : 'NULL';
+      const revAt = r.reviewed_at ? `'${r.reviewed_at.toISOString()}'` : 'NULL';
+      sqlDump += `INSERT OR REPLACE INTO "UserReport" ("id", "user_id", "title", "category", "content", "screenshots", "status", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at") VALUES ('${r.id}', '${r.user_id}', '${r.title.replace(/'/g, "''")}', '${r.category.replace(/'/g, "''")}', '${r.content.replace(/'/g, "''")}', ${scr}, '${r.status}', ${aNote}, ${revBy}, ${revAt}, '${r.created_at.toISOString()}', '${r.updated_at.toISOString()}');\n`;
+    });
+
+    const sqlPath = path.join(backupDir, `db_backup_${timestampStr}.sql`);
+    const latestSqlPath = path.join(backupDir, `latest_db_backup.sql`);
 
     fs.writeFileSync(sqlPath, sqlDump, 'utf-8');
     fs.writeFileSync(latestSqlPath, sqlDump, 'utf-8');
@@ -137,6 +162,8 @@ async function backupDatabase() {
     console.log(`   • Users/Anggota   : ${users.length} akun`);
     console.log(`   • Attendances/Absen: ${attendances.length} sesi`);
     console.log(`   • Leave Requests   : ${leaveRequests.length} pengajuan`);
+    console.log(`   • Reports/Laporan  : ${userReports.length} laporan`);
+    console.log(`   • Active Sessions  : ${userSessions.length} sesi login`);
     console.log(`   • Audit Logs       : ${auditLogs.length} rekam jejak`);
     console.log('====================================================');
 
