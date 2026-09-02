@@ -43,6 +43,34 @@ export async function POST(request: Request) {
       );
     }
 
+    const startDateObj = new Date(start_date);
+    const endDateObj = new Date(end_date);
+
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+      return NextResponse.json({ error: 'Format tanggal tidak valid.' }, { status: 400 });
+    }
+
+    // Anti-backdate validation: Start date must not be before today (midnight Jakarta)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startMidnight = new Date(startDateObj);
+    startMidnight.setHours(0, 0, 0, 0);
+
+    if (startMidnight < today) {
+      return NextResponse.json(
+        { error: 'Tanggal mulai izin tidak boleh tanggal yang sudah lewat (backdate).' },
+        { status: 400 }
+      );
+    }
+
+    // End date must not be earlier than start date
+    if (endDateObj < startDateObj) {
+      return NextResponse.json(
+        { error: 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai izin.' },
+        { status: 400 }
+      );
+    }
+
     let attachmentPath = '';
     if (screenshot_base64) {
       attachmentPath = await saveScreenshotFile(screenshot_base64, user.id, 'duty-in');

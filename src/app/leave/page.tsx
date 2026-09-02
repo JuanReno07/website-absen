@@ -49,6 +49,17 @@ export default function MemberLeavePage() {
     fetchLeaveRequests();
   }, []);
 
+  const [todayStr, setTodayStr] = useState('');
+
+  useEffect(() => {
+    // Current date in YYYY-MM-DD for min attribute
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    setTodayStr(`${y}-${m}-${d}`);
+  }, []);
+
   const handleSubmitLeave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -56,6 +67,16 @@ export default function MemberLeavePage() {
 
     if (!startDate || !endDate || !reason.trim()) {
       setErrorMsg('Seluruh kolom formulir pengajuan izin wajib diisi.');
+      return;
+    }
+
+    if (todayStr && startDate < todayStr) {
+      setErrorMsg('Tanggal mulai izin tidak boleh tanggal yang sudah lewat (backdate).');
+      return;
+    }
+
+    if (endDate < startDate) {
+      setErrorMsg('Tanggal selesai tidak boleh lebih awal dari tanggal mulai izin.');
       return;
     }
 
@@ -174,7 +195,14 @@ export default function MemberLeavePage() {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  min={todayStr || undefined}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setStartDate(newStart);
+                    if (endDate && newStart > endDate) {
+                      setEndDate(newStart);
+                    }
+                  }}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   required
                   className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-medium cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500 transition-colors"
@@ -194,6 +222,7 @@ export default function MemberLeavePage() {
                 <input
                   type="date"
                   value={endDate}
+                  min={startDate || todayStr || undefined}
                   onChange={(e) => setEndDate(e.target.value)}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   required
