@@ -192,35 +192,35 @@ export default function AdminReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col">
+    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <Navbar user={user} activeDuty={null} />
 
-      <div className="flex-1 flex flex-col lg:flex-row w-full px-4 sm:px-6 lg:px-8 py-8 gap-6 lg:gap-8">
+      <div className="flex-1 flex flex-col lg:flex-row">
         <AdminSidebar />
 
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-slate-800/60 p-6 rounded-2xl border border-slate-700/60 backdrop-blur-xl shadow-2xl">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-600/20 rounded-xl border border-red-500/30 text-red-400">
-                <FileText className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white tracking-wide">Kelola Laporan Anggota</h1>
-                <p className="text-sm text-slate-400">Tinjau, periksa bukti multi-screenshot, dan tanggapi laporan dari anggota.</p>
-              </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+                <FileText className="w-6 h-6 text-brand-400" />
+                Kelola Laporan Anggota
+              </h1>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Tinjau, periksa bukti multi-screenshot, dan tanggapi laporan dari anggota.
+              </p>
             </div>
 
             <button
               onClick={fetchReports}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-semibold text-sm transition-colors self-start md:self-auto"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 font-bold text-xs transition-all shadow-md self-start sm:self-auto"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
             </button>
           </div>
 
           {/* Filters Bar */}
-          <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 mb-6 backdrop-blur-xl space-y-4">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg">
             <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -229,7 +229,7 @@ export default function AdminReportsPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Cari judul, rincian, atau nama anggota..."
-                  className="w-full bg-slate-900/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
 
@@ -237,7 +237,7 @@ export default function AdminReportsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500 transition-colors"
               >
                 <option value="ALL">Semua Status</option>
                 <option value="MENUNGGU_DITANGGAPI">Menunggu Tanggapan</option>
@@ -250,7 +250,7 @@ export default function AdminReportsPage() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500 transition-colors"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-500 transition-colors"
               >
                 <option value="ALL">Semua Kategori</option>
                 {categories.map((cat) => (
@@ -263,22 +263,22 @@ export default function AdminReportsPage() {
           </div>
 
           {/* Reports Table */}
-          <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
             {loading ? (
               <div className="p-12 text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-3" />
-                <p className="text-slate-400 text-sm">Memuat daftar laporan anggota...</p>
+                <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-3" />
+                <p className="text-slate-400 text-xs">Memuat daftar laporan anggota...</p>
               </div>
             ) : reports.length === 0 ? (
               <div className="p-12 text-center">
                 <FileText className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-white mb-1">Tidak Ada Data Laporan</h3>
-                <p className="text-sm text-slate-400">Tidak ada laporan yang sesuai dengan kriteria filter Anda.</p>
+                <h3 className="text-base font-bold text-white mb-1">Tidak Ada Data Laporan</h3>
+                <p className="text-xs text-slate-400">Tidak ada laporan yang sesuai dengan kriteria filter Anda.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300 min-w-[950px]">
-                  <thead className="bg-slate-900/90 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">
+                <table className="w-full text-left text-xs text-slate-300 min-w-[950px]">
+                  <thead className="bg-slate-900/90 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
                     <tr>
                       <th className="px-4 py-3.5 text-center">No</th>
                       <th className="px-4 py-3.5">Tanggal</th>
