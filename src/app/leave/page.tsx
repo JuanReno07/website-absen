@@ -140,7 +140,7 @@ export default function MemberLeavePage() {
     <div className="min-h-screen flex flex-col bg-slate-950">
       <Navbar user={user} activeDuty={null} />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-100 flex items-center gap-2">
             <Calendar className="w-6 h-6 text-brand-400" />
@@ -166,8 +166,9 @@ export default function MemberLeavePage() {
             )}
 
             {successMsg && (
-              <div className="p-3 bg-emerald-950 border border-emerald-800 rounded-xl text-emerald-300 text-xs">
-                {successMsg}
+              <div className="p-3 bg-emerald-950 border border-emerald-800 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{successMsg}</span>
               </div>
             )}
 
@@ -243,7 +244,7 @@ export default function MemberLeavePage() {
                   required
                   placeholder="Jelaskan alasan izin Anda..."
                   rows={3}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500"
+                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500"
                 />
               </div>
 
@@ -258,7 +259,7 @@ export default function MemberLeavePage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 text-xs"
+                className="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 text-xs transition-all"
               >
                 <Send className="w-4 h-4" />
                 <span>{submitting ? 'KIRIMKAN...' : 'KIRIM PERMOHONAN IZIN'}</span>
@@ -282,36 +283,37 @@ export default function MemberLeavePage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+                  <thead className="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-800">
                     <tr>
-                      <th className="p-3">Jenis Izin</th>
-                      <th className="p-3">Periode</th>
-                      <th className="p-3">Alasan</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3">Bukti</th>
+                      <th className="p-3.5 whitespace-nowrap">Jenis Izin</th>
+                      <th className="p-3.5 whitespace-nowrap">Periode</th>
+                      <th className="p-3.5 min-w-[200px]">Alasan</th>
+                      <th className="p-3.5 text-center whitespace-nowrap">Status</th>
+                      <th className="p-3.5 text-center whitespace-nowrap">Bukti</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 text-slate-200">
                     {leaveRequests.map((l) => (
-                      <tr key={l.id} className="hover:bg-slate-900/40">
-                        <td className="p-3 font-bold text-brand-400">{l.leave_type}</td>
-                        <td className="p-3 font-semibold text-xs text-slate-200 whitespace-nowrap">
+                      <tr key={l.id} className="hover:bg-slate-900/40 transition-colors">
+                        <td className="p-3.5 font-bold text-brand-400 whitespace-nowrap align-top">{l.leave_type}</td>
+                        <td className="p-3.5 font-semibold text-xs text-slate-200 whitespace-nowrap align-top">
                           {formatDateDMY(l.start_date)} - {formatDateDMY(l.end_date)}
                         </td>
-                        <td className="p-3 max-w-xs truncate text-slate-300">
-                          {l.reason}
+                        <td className="p-3.5 text-slate-300 break-words whitespace-normal leading-relaxed align-top">
+                          <p className="text-xs">{l.reason}</p>
                           {l.admin_note && (
-                            <span className="block text-[10px] text-amber-400 mt-0.5">
-                              Note Admin: {l.admin_note}
+                            <span className="block text-[11px] text-amber-400 mt-1.5 p-1.5 rounded-lg bg-amber-950/40 border border-amber-800/60">
+                              <strong>Catatan Admin:</strong> {l.admin_note}
                             </span>
                           )}
                         </td>
-                        <td className="p-3">{getStatusBadge(l.status)}</td>
-                        <td className="p-3">
+                        <td className="p-3.5 text-center whitespace-nowrap align-top">{getStatusBadge(l.status)}</td>
+                        <td className="p-3.5 text-center whitespace-nowrap align-top">
                           {l.attachment && (
                             <button
                               onClick={() => setSelectedScreenshot(l.attachment)}
-                              className="p-1 bg-slate-900 text-brand-400 rounded hover:text-white"
+                              className="p-1.5 bg-slate-900 border border-slate-800 text-brand-400 rounded-lg hover:text-white hover:bg-brand-600 transition-colors"
+                              title="Lihat Bukti Foto"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </button>
