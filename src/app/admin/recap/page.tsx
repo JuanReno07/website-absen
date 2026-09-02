@@ -255,7 +255,8 @@ export default function AdminRecapPage() {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500"
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500"
                   />
                 </div>
 
@@ -265,7 +266,8 @@ export default function AdminRecapPage() {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500"
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500"
                   />
                 </div>
 

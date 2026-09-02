@@ -172,8 +172,9 @@ export default function MemberLeavePage() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
                   required
-                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-mono"
+                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-medium cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
 
@@ -183,8 +184,9 @@ export default function MemberLeavePage() {
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
+                  onClick={(e) => e.currentTarget.showPicker?.()}
                   required
-                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-mono"
+                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-medium cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
 
