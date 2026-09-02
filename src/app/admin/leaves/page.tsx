@@ -138,28 +138,28 @@ export default function AdminLeavesPage() {
           <div className="glass-card rounded-3xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-900/90 text-slate-400 uppercase font-mono border-b border-slate-800">
+                <thead className="bg-slate-900/90 text-slate-400 uppercase text-[11px] font-bold border-b border-slate-800">
                   <tr>
-                    <th className="p-3">Nama Anggota</th>
-                    <th className="p-3">Jabatan</th>
-                    <th className="p-3">Jenis Izin</th>
-                    <th className="p-3">Periode Izin</th>
-                    <th className="p-3">Alasan</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3 text-right">Aksi Admin</th>
+                    <th className="p-3.5 whitespace-nowrap">Nama Anggota</th>
+                    <th className="p-3.5 whitespace-nowrap">Jabatan</th>
+                    <th className="p-3.5 whitespace-nowrap">Jenis Izin</th>
+                    <th className="p-3.5 whitespace-nowrap">Periode Izin</th>
+                    <th className="p-3.5 min-w-[220px]">Alasan</th>
+                    <th className="p-3.5 text-center whitespace-nowrap">Status</th>
+                    <th className="p-3.5 text-right whitespace-nowrap">Aksi Admin</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-200">
                   {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i} className="animate-pulse">
-                        <td className="p-3"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-36 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
-                        <td className="p-3 text-right"><div className="w-24 h-7 bg-slate-800/80 rounded-lg ml-auto"></div></td>
+                        <td className="p-3.5"><div className="w-28 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3.5"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3.5"><div className="w-24 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3.5"><div className="w-32 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3.5"><div className="w-36 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3.5"><div className="w-20 h-4 bg-slate-800/80 rounded-lg"></div></td>
+                        <td className="p-3.5 text-right"><div className="w-24 h-7 bg-slate-800/80 rounded-lg ml-auto"></div></td>
                       </tr>
                     ))
                   ) : leaveRequests.length === 0 ? (
@@ -170,27 +170,27 @@ export default function AdminLeavesPage() {
                     </tr>
                   ) : (
                     leaveRequests.map((l) => (
-                      <tr key={l.id} className="hover:bg-slate-900/40">
-                        <td className="p-3 font-bold text-slate-100">{l.user.discord_name}</td>
-                        <td className="p-3 text-brand-400 font-semibold">{l.user.position.name}</td>
-                        <td className="p-3 font-bold">{l.leave_type}</td>
-                        <td className="p-3 font-semibold text-xs text-slate-200 whitespace-nowrap">
+                      <tr key={l.id} className="hover:bg-slate-900/40 transition-colors">
+                        <td className="p-3.5 font-bold text-slate-100 whitespace-nowrap align-top">{l.user.discord_name}</td>
+                        <td className="p-3.5 text-brand-400 font-semibold whitespace-nowrap align-top">{l.user.position.name}</td>
+                        <td className="p-3.5 font-bold whitespace-nowrap align-top">{l.leave_type}</td>
+                        <td className="p-3.5 font-semibold text-xs text-slate-200 whitespace-nowrap align-top">
                           {formatDateDMY(l.start_date)} - {formatDateDMY(l.end_date)}
                         </td>
-                        <td className="p-3 max-w-xs truncate text-slate-300">
-                          {l.reason}
+                        <td className="p-3.5 text-slate-300 break-words whitespace-normal leading-relaxed align-top max-w-md">
+                          <p className="text-xs">{l.reason}</p>
                           {l.attachment && (
                             <button
                               onClick={() => setSelectedScreenshot(l.attachment)}
-                              className="ml-2 text-brand-400 inline-flex items-center gap-1 font-bold"
+                              className="mt-1.5 text-brand-400 hover:text-brand-300 inline-flex items-center gap-1 font-bold text-xs bg-slate-900 px-2 py-1 rounded-lg border border-slate-800"
                             >
-                              <ExternalLink className="w-3 h-3" /> Bukti
+                              <ExternalLink className="w-3 h-3" /> Lihat Bukti Foto
                             </button>
                           )}
                         </td>
-                        <td className="p-3">
+                        <td className="p-3.5 text-center whitespace-nowrap align-top">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                               l.status === 'DISETUJUI'
                                 ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
                                 : l.status === 'DITOLAK'
@@ -201,7 +201,7 @@ export default function AdminLeavesPage() {
                             {l.status}
                           </span>
                         </td>
-                        <td className="p-3 text-right">
+                        <td className="p-3.5 text-right whitespace-nowrap align-top">
                           {l.status === 'MENUNGGU_PERSETUJUAN' ? (
                             <div className="flex items-center justify-end gap-1.5">
                               <button
