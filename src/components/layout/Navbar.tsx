@@ -42,17 +42,30 @@ export default function Navbar({
   const DEFAULT_LOGO = '/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png';
   const DEFAULT_NAME = 'ASE Duty System';
 
-  // Instant 0ms session user state from localStorage to eliminate any login button flicker
-  const [currentUser, setCurrentUser] = useState<any>(() => {
-    if (initialUser) return initialUser;
+  // Safe state initialization to guarantee 100% hydration match between server and client
+  const [currentUser, setCurrentUser] = useState<any>(initialUser || null);
+  const [currentLogo, setCurrentLogo] = useState<string>(initialLogoUrl || DEFAULT_LOGO);
+  const [currentSystemName, setCurrentSystemName] = useState<string>(initialSystemName || DEFAULT_NAME);
+
+  // Read localStorage after client mount to eliminate React Error #418, #423, #425
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cachedUser = localStorage.getItem('ase_user_session');
-        if (cachedUser) return JSON.parse(cachedUser);
+        if (!initialUser) {
+          const cachedUser = localStorage.getItem('ase_user_session');
+          if (cachedUser) setCurrentUser(JSON.parse(cachedUser));
+        }
+        if (!initialLogoUrl) {
+          const cachedLogo = localStorage.getItem('ase_system_logo');
+          if (cachedLogo) setCurrentLogo(cachedLogo);
+        }
+        if (!initialSystemName) {
+          const cachedName = localStorage.getItem('ase_system_name');
+          if (cachedName) setCurrentSystemName(cachedName);
+        }
       } catch (e) {}
     }
-    return null;
-  });
+  }, [initialUser, initialLogoUrl, initialSystemName]);
 
   // Sync if parent page passes updated user prop
   useEffect(() => {
@@ -65,29 +78,6 @@ export default function Navbar({
       }
     }
   }, [initialUser]);
-
-  // Instant 0ms pre-hydration from localStorage to eliminate old logo flash
-  const [currentLogo, setCurrentLogo] = useState<string>(() => {
-    if (initialLogoUrl) return initialLogoUrl;
-    if (typeof window !== 'undefined') {
-      try {
-        const cachedLogo = localStorage.getItem('ase_system_logo');
-        if (cachedLogo) return cachedLogo;
-      } catch (e) {}
-    }
-    return DEFAULT_LOGO;
-  });
-
-  const [currentSystemName, setCurrentSystemName] = useState<string>(() => {
-    if (initialSystemName) return initialSystemName;
-    if (typeof window !== 'undefined') {
-      try {
-        const cachedName = localStorage.getItem('ase_system_name');
-        if (cachedName) return cachedName;
-      } catch (e) {}
-    }
-    return DEFAULT_NAME;
-  });
 
   const loadSettings = () => {
     fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' })
