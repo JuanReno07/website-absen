@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { sendReportWebhook } from '@/lib/discord';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,16 @@ export async function POST(request: Request) {
         status: 'MENUNGGU_DITANGGAPI',
       },
     });
+
+    // Asynchronous non-blocking Discord Webhook trigger (#laporan-kegiatan)
+    sendReportWebhook({
+      discord_name: user.discord_name,
+      position_name: user.position?.name || 'Anggota',
+      title: newReport.title,
+      category: newReport.category,
+      content: newReport.content,
+      screenshot_count: validScreenshots.length,
+    }).catch((err) => console.error('Report Discord webhook error:', err));
 
     return NextResponse.json({
       success: true,

@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { saveScreenshotFile } from '@/lib/storage';
 import { calculateDurationInMinutes } from '@/lib/utils';
+import { sendDutyOutWebhook } from '@/lib/discord';
 
 export async function POST(request: Request) {
   try {
@@ -54,6 +55,18 @@ export async function POST(request: Request) {
         user_note: user_note ? user_note.trim() : activeDuty.user_note,
       },
     });
+
+    // Asynchronous non-blocking Discord Webhook trigger (#log-duty-out)
+    sendDutyOutWebhook({
+      username: user.username,
+      discord_name: user.discord_name,
+      position_name: user.position?.name || 'Anggota',
+      duty_in_time: activeDuty.duty_in_time,
+      duty_out_time: now,
+      duration_minutes: durationMinutes,
+      user_note: user_note ? user_note.trim() : activeDuty.user_note,
+      screenshot_url: screenshotPath,
+    }).catch((err) => console.error('Duty OUT Discord webhook error:', err));
 
     return NextResponse.json({
       success: true,

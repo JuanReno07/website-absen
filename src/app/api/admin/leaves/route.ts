@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { sendLeaveWebhook } from '@/lib/discord';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +60,7 @@ export async function PUT(request: Request) {
 
     const existing = await prisma.leaveRequest.findUnique({
       where: { id },
-      include: { user: true },
+      include: { user: { include: { position: true } } },
     });
 
     if (!existing) {
@@ -87,6 +88,20 @@ export async function PUT(request: Request) {
         new_data: JSON.stringify({ status, admin_note }),
       },
     });
+
+    // Asynchronous non-blocking Discord Webhook trigger (#pengajuan-izin)
+    if (status === 'DISETUJUI' || status === 'DITOLAK') {
+      sendLeaveWebhook({
+        type: status === 'DISETUJUI' ? 'APPROVED' : 'REJECTED',
+        discord_name: existing.user.discord_name,
+        position_name: existing.user.position?.name || 'Anggota',
+        leave_type: existing.leave_type,
+        start_date: existing.start_date,
+        end_date: existing.end_date,
+        reason: existing.reason,
+        admin_note: updated.admin_note,
+      }).catch((err) => console.error('Leave approval Discord webhook error:', err));
+    }
 
     return NextResponse.json({
       success: true,

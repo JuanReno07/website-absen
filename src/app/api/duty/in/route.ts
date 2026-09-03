@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { saveScreenshotFile } from '@/lib/storage';
+import { sendDutyInWebhook } from '@/lib/discord';
 
 export async function POST(request: Request) {
   try {
@@ -61,6 +62,16 @@ export async function POST(request: Request) {
         user_note: user_note ? user_note.trim() : null,
       },
     });
+
+    // Asynchronous non-blocking Discord Webhook trigger (#log-duty-in)
+    sendDutyInWebhook({
+      username: user.username,
+      discord_name: user.discord_name,
+      position_name: user.position?.name || 'Anggota',
+      duty_in_time: now,
+      user_note: user_note,
+      screenshot_url: screenshotPath,
+    }).catch((err) => console.error('Duty IN Discord webhook error:', err));
 
     return NextResponse.json({
       success: true,
