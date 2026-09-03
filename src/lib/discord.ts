@@ -2,28 +2,67 @@ import { formatIndonesianTime, formatDateDMY, formatDurationMinutes } from './ut
 
 /**
  * Core utility to safely send rich embeds to Discord Webhooks in the background.
- * Uses a 4-second timeout and fails silently so that website operations are never blocked.
+ * Uses a 6-second timeout and supports both URL images and Base64 multipart image uploads.
  */
-async function postToDiscord(webhookUrl: string | undefined, payload: any) {
+async function postToDiscord(
+  webhookUrl: string | undefined,
+  payload: any,
+  screenshotData?: string | null
+) {
   if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
     return;
   }
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
+    // If screenshot is base64, send via multipart/form-data so Discord hosts and displays the image
+    if (screenshotData && screenshotData.includes('base64,')) {
+      const parts = screenshotData.split('base64,');
+      const mime = parts[0].replace('data:', '').replace(';', '') || 'image/webp';
+      const buffer = Buffer.from(parts[1], 'base64');
+      const filename = mime.includes('png') ? 'screenshot.png' : 'screenshot.webp';
+
+      const formData = new FormData();
+      const blob = new Blob([buffer], { type: mime });
+      formData.append('files[0]', blob, filename);
+
+      if (payload.embeds && payload.embeds[0]) {
+        payload.embeds[0].image = { url: `attachment://${filename}` };
+      }
+
+      formData.append('payload_json', JSON.stringify(payload));
+
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        console.error('Discord webhook multipart response error:', res.status, await res.text());
+      }
+    } else {
+      if (screenshotData && screenshotData.startsWith('http') && payload.embeds && payload.embeds[0]) {
+        payload.embeds[0].image = { url: screenshotData };
+      }
+
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        console.error('Discord webhook json response error:', res.status, await res.text());
+      }
+    }
 
     clearTimeout(timeoutId);
   } catch (error) {
-    // Fail silently so website flow is never disrupted
-    console.error('Discord webhook post error (ignored):', error);
+    console.error('Discord webhook post error:', error);
   }
 }
 
@@ -63,14 +102,14 @@ export async function sendDutyInWebhook(data: {
     embed.fields.push({ name: '📝 Catatan Tugas', value: data.user_note.trim(), inline: false });
   }
 
-  if (data.screenshot_url && data.screenshot_url.startsWith('http')) {
-    embed.image = { url: data.screenshot_url };
-  }
-
-  await postToDiscord(url, {
-    username: 'ASE Duty IN Bot',
-    embeds: [embed],
-  });
+  await postToDiscord(
+    url,
+    {
+      username: 'ASE Duty IN Bot',
+      embeds: [embed],
+    },
+    data.screenshot_url
+  );
 }
 
 /**
@@ -119,14 +158,14 @@ export async function sendDutyOutWebhook(data: {
     embed.fields.push({ name: '📝 Catatan Akhir', value: data.user_note.trim(), inline: false });
   }
 
-  if (data.screenshot_url && data.screenshot_url.startsWith('http')) {
-    embed.image = { url: data.screenshot_url };
-  }
-
-  await postToDiscord(url, {
-    username: 'ASE Duty OUT Bot',
-    embeds: [embed],
-  });
+  await postToDiscord(
+    url,
+    {
+      username: 'ASE Duty OUT Bot',
+      embeds: [embed],
+    },
+    data.screenshot_url
+  );
 }
 
 /**

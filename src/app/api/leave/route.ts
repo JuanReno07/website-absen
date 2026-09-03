@@ -89,21 +89,25 @@ export async function POST(request: Request) {
       },
     });
 
-    // Asynchronous non-blocking Discord Webhook trigger (#pengajuan-izin)
-    sendLeaveWebhook({
-      type: 'SUBMITTED',
-      discord_name: user.discord_name,
-      position_name: user.position?.name || 'Anggota',
-      leave_type: newLeave.leave_type,
-      start_date: newLeave.start_date,
-      end_date: newLeave.end_date,
-      reason: newLeave.reason,
-    }).catch((err) => console.error('Leave Discord webhook error:', err));
+    // Discord Webhook trigger (#pengajuan-izin)
+    try {
+      await sendLeaveWebhook({
+        type: 'SUBMITTED',
+        discord_name: user.discord_name,
+        position_name: user.position?.name || 'Anggota',
+        leave_type: newLeave.leave_type,
+        start_date: newLeave.start_date,
+        end_date: newLeave.end_date,
+        reason: newLeave.reason,
+      });
+    } catch (webhookErr) {
+      console.error('Leave Discord webhook error:', webhookErr);
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Pengajuan izin berhasil dikirim. Menunggu persetujuan Admin.',
-      leaveRequest: newLeave,
+      leave: newLeave,
     });
   } catch (error: any) {
     console.error('POST leave error:', error);
