@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { saveScreenshotFile } from '@/lib/storage';
+import { sendLeaveWebhook } from '@/lib/discord';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,6 +88,17 @@ export async function POST(request: Request) {
         status: 'MENUNGGU_PERSETUJUAN',
       },
     });
+
+    // Asynchronous non-blocking Discord Webhook trigger (#pengajuan-izin)
+    sendLeaveWebhook({
+      type: 'SUBMITTED',
+      discord_name: user.discord_name,
+      position_name: user.position?.name || 'Anggota',
+      leave_type: newLeave.leave_type,
+      start_date: newLeave.start_date,
+      end_date: newLeave.end_date,
+      reason: newLeave.reason,
+    }).catch((err) => console.error('Leave Discord webhook error:', err));
 
     return NextResponse.json({
       success: true,
