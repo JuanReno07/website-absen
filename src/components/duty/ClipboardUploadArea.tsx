@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Image as ImageIcon, Clipboard, Trash2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { compressImage } from '@/lib/imageUtils';
 
 interface ClipboardUploadAreaProps {
   onImageSelected: (base64Image: string | null) => void;
@@ -33,17 +34,23 @@ export default function ClipboardUploadArea({
       return;
     }
 
-    // Format file size string
-    const sizeInMb = (file.size / (1024 * 1024)).toFixed(2);
-    const sizeInKb = Math.round(file.size / 1024);
-    setFileSizeStr(file.size >= 1024 * 1024 ? `${sizeInMb} MB` : `${sizeInKb} KB`);
-    setFileName(file.name || `screenshot-${Date.now()}.png`);
+    setFileName(file.name || `screenshot-${Date.now()}.webp`);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setPreview(result);
-      onImageSelected(result);
+    reader.onload = async (e) => {
+      const rawResult = e.target?.result as string;
+      try {
+        // Automatically compress to crisp 1440px WebP (~30-50KB)
+        const compressed = await compressImage(rawResult, 1440, 1440, 0.78);
+        const approxBytes = Math.round((compressed.length * 3) / 4);
+        const kb = Math.round(approxBytes / 1024);
+        setFileSizeStr(`${kb} KB (Terkompresi Cepat)`);
+        setPreview(compressed);
+        onImageSelected(compressed);
+      } catch (err) {
+        setPreview(rawResult);
+        onImageSelected(rawResult);
+      }
     };
     reader.readAsDataURL(file);
   };
