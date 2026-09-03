@@ -23,6 +23,7 @@ import {
   Tag,
   MessageSquare,
 } from 'lucide-react';
+import { compressImage } from '@/lib/imageUtils';
 
 interface ReportItem {
   id: string;
@@ -115,9 +116,14 @@ export default function UserReportsPage() {
 
     validFiles.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         if (event.target?.result) {
-          newScreenshots.push(event.target.result as string);
+          try {
+            const compressed = await compressImage(event.target.result as string, 1440, 1440, 0.78);
+            newScreenshots.push(compressed);
+          } catch (e) {
+            newScreenshots.push(event.target.result as string);
+          }
         }
         processedCount++;
         if (processedCount === validFiles.length) {
