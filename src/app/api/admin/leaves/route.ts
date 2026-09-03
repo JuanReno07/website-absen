@@ -89,18 +89,22 @@ export async function PUT(request: Request) {
       },
     });
 
-    // Asynchronous non-blocking Discord Webhook trigger (#pengajuan-izin)
+    // Discord Webhook trigger (#pengajuan-izin)
     if (status === 'DISETUJUI' || status === 'DITOLAK') {
-      sendLeaveWebhook({
-        type: status === 'DISETUJUI' ? 'APPROVED' : 'REJECTED',
-        discord_name: existing.user.discord_name,
-        position_name: existing.user.position?.name || 'Anggota',
-        leave_type: existing.leave_type,
-        start_date: existing.start_date,
-        end_date: existing.end_date,
-        reason: existing.reason,
-        admin_note: updated.admin_note,
-      }).catch((err) => console.error('Leave approval Discord webhook error:', err));
+      try {
+        await sendLeaveWebhook({
+          type: status === 'DISETUJUI' ? 'APPROVED' : 'REJECTED',
+          discord_name: existing.user.discord_name,
+          position_name: existing.user.position?.name || 'Anggota',
+          leave_type: existing.leave_type,
+          start_date: existing.start_date,
+          end_date: existing.end_date,
+          reason: existing.reason,
+          admin_note: updated.admin_note,
+        });
+      } catch (webhookErr) {
+        console.error('Leave approval Discord webhook error:', webhookErr);
+      }
     }
 
     return NextResponse.json({

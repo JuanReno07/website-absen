@@ -63,15 +63,19 @@ export async function POST(request: Request) {
       },
     });
 
-    // Asynchronous non-blocking Discord Webhook trigger (#log-duty-in)
-    sendDutyInWebhook({
-      username: user.username,
-      discord_name: user.discord_name,
-      position_name: user.position?.name || 'Anggota',
-      duty_in_time: now,
-      user_note: user_note,
-      screenshot_url: screenshotPath,
-    }).catch((err) => console.error('Duty IN Discord webhook error:', err));
+    // Discord Webhook trigger (#log-duty-in)
+    try {
+      await sendDutyInWebhook({
+        username: user.username,
+        discord_name: user.discord_name,
+        position_name: user.position?.name || 'Anggota',
+        duty_in_time: now,
+        user_note: user_note,
+        screenshot_url: screenshotPath,
+      });
+    } catch (webhookErr) {
+      console.error('Duty IN Discord webhook error:', webhookErr);
+    }
 
     return NextResponse.json({
       success: true,

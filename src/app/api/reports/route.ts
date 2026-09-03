@@ -62,15 +62,19 @@ export async function POST(request: Request) {
       },
     });
 
-    // Asynchronous non-blocking Discord Webhook trigger (#laporan-kegiatan)
-    sendReportWebhook({
-      discord_name: user.discord_name,
-      position_name: user.position?.name || 'Anggota',
-      title: newReport.title,
-      category: newReport.category,
-      content: newReport.content,
-      screenshot_count: validScreenshots.length,
-    }).catch((err) => console.error('Report Discord webhook error:', err));
+    // Discord Webhook trigger (#laporan-kegiatan)
+    try {
+      await sendReportWebhook({
+        discord_name: user.discord_name,
+        position_name: user.position?.name || 'Anggota',
+        title: newReport.title,
+        category: newReport.category,
+        content: newReport.content,
+        screenshot_count: validScreenshots.length,
+      });
+    } catch (webhookErr) {
+      console.error('Report Discord webhook error:', webhookErr);
+    }
 
     return NextResponse.json({
       success: true,
