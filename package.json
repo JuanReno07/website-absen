@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:push-cloud": "npx tsx scripts/sync-local-to-turso.ts",
-    "db:backup": "npx tsx scripts/backup-db.ts"
+    "db:backup": "npx tsx scripts/backup-db.ts",
+    "db:restore": "npx tsx scripts/restore-from-backup.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.8.0",

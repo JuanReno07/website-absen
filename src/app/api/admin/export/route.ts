@@ -17,15 +17,28 @@ export async function GET(request: Request) {
     const endDateParam = searchParams.get('endDate');
 
     const where: any = {};
+    const leaveWhere: any = {};
+    const reportWhere: any = {};
+
     if (status && status !== 'ALL') where.status = status;
-    if (position_id && position_id !== 'ALL') where.user = { position_id };
+    if (position_id && position_id !== 'ALL') {
+      where.user = { position_id };
+      leaveWhere.user = { position_id };
+      reportWhere.user = { position_id };
+    }
 
     const now = new Date();
     let periodLabel = 'Semua Waktu';
 
     if (period === 'today') {
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      where.duty_in_time = { gte: startOfToday };
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      where.duty_in_time = { gte: startOfToday, lte: endOfToday };
+      leaveWhere.OR = [
+        { start_date: { lte: endOfToday }, end_date: { gte: startOfToday } },
+        { created_at: { gte: startOfToday, lte: endOfToday } },
+      ];
+      reportWhere.created_at = { gte: startOfToday, lte: endOfToday };
       periodLabel = 'Hari Ini';
     } else if (period === 'week') {
       const day = now.getDay();
@@ -33,26 +46,62 @@ export async function GET(request: Request) {
       const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diff);
       startOfWeek.setHours(0, 0, 0, 0);
       where.duty_in_time = { gte: startOfWeek };
+      leaveWhere.OR = [
+        { end_date: { gte: startOfWeek } },
+        { created_at: { gte: startOfWeek } },
+      ];
+      reportWhere.created_at = { gte: startOfWeek };
       periodLabel = 'Minggu Ini';
     } else if (period === 'month') {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       where.duty_in_time = { gte: startOfMonth };
+      leaveWhere.OR = [
+        { end_date: { gte: startOfMonth } },
+        { created_at: { gte: startOfMonth } },
+      ];
+      reportWhere.created_at = { gte: startOfMonth };
       periodLabel = 'Bulan Ini';
     } else if (period === 'custom' && startDateParam && endDateParam) {
+      const startCustom = new Date(startDateParam + 'T00:00:00');
+      const endCustom = new Date(endDateParam + 'T23:59:59.999');
       where.duty_in_time = {
-        gte: new Date(startDateParam),
-        lte: new Date(endDateParam + 'T23:59:59'),
+        gte: startCustom,
+        lte: endCustom,
+      };
+      leaveWhere.OR = [
+        { start_date: { lte: endCustom }, end_date: { gte: startCustom } },
+        { created_at: { gte: startCustom, lte: endCustom } },
+      ];
+      reportWhere.created_at = {
+        gte: startCustom,
+        lte: endCustom,
       };
       periodLabel = `${startDateParam} s/d ${endDateParam}`;
     }
 
-    const attendances = await prisma.attendance.findMany({
-      where,
-      include: {
-        user: { include: { position: true } },
-      },
-      orderBy: { duty_in_time: 'desc' },
-    });
+    const [attendances, leaveRequests, userReports] = await Promise.all([
+      prisma.attendance.findMany({
+        where,
+        include: {
+          user: { include: { position: true } },
+        },
+        orderBy: { duty_in_time: 'desc' },
+      }),
+      prisma.leaveRequest.findMany({
+        where: leaveWhere,
+        include: {
+          user: { include: { position: true } },
+        },
+        orderBy: { created_at: 'desc' },
+      }),
+      prisma.userReport.findMany({
+        where: reportWhere,
+        include: {
+          user: { include: { position: true } },
+        },
+        orderBy: { created_at: 'desc' },
+      }),
+    ]);
 
     const exportRecords = attendances.map((a) => ({
       id: a.id,
@@ -66,6 +115,40 @@ export async function GET(request: Request) {
       status: a.status,
       user_note: a.user_note,
       admin_note: a.admin_note,
+    }));
+
+    const leaveRecords = leaveRequests.map((l) => ({
+      id: l.id,
+      discord_name: l.user.discord_name,
+      position_name: l.user.position.name,
+      ooc_name: l.user.ooc_name,
+      steam_hex: l.user.steam_hex,
+      leave_type: l.leave_type,
+      start_date: l.start_date,
+      end_date: l.end_date,
+      reason: l.reason,
+      attachment: l.attachment,
+      status: l.status,
+      admin_note: l.admin_note,
+      approved_by: l.approved_by,
+      approved_at: l.approved_at,
+      created_at: l.created_at,
+    }));
+
+    const reportRecords = userReports.map((r) => ({
+      id: r.id,
+      discord_name: r.user.discord_name,
+      position_name: r.user.position.name,
+      ooc_name: r.user.ooc_name,
+      steam_hex: r.user.steam_hex,
+      title: r.title,
+      category: r.category,
+      content: r.content,
+      status: r.status,
+      admin_note: r.admin_note,
+      reviewed_by: r.reviewed_by,
+      reviewed_at: r.reviewed_at,
+      created_at: r.created_at,
     }));
 
     if (format === 'csv') {
@@ -97,13 +180,18 @@ export async function GET(request: Request) {
       });
     }
 
-    const excelBuffer = await generateAttendanceExcel(exportRecords, periodLabel);
+    const excelBuffer = await generateAttendanceExcel(
+      exportRecords,
+      periodLabel,
+      leaveRecords,
+      reportRecords
+    );
     const uint8Array = new Uint8Array(excelBuffer);
 
     return new Response(uint8Array, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="Laporan_Duty_ASE_${period}_${new Date().toISOString().slice(0, 10)}.xlsx"`,
+        'Content-Disposition': `attachment; filename="Laporan_Lengkap_ASE_${period}_${new Date().toISOString().slice(0, 10)}.xlsx"`,
       },
     });
   } catch (error: any) {

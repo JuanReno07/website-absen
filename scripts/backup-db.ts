@@ -1,6 +1,27 @@
+import * as path from 'path';
+import * as fs from 'fs';
+
+// Read .env file natively
+const envPath = path.join(process.cwd(), '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+      const eqIdx = trimmed.indexOf('=');
+      const key = trimmed.substring(0, eqIdx).trim();
+      let val = trimmed.substring(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.substring(1, val.length - 1);
+      }
+      if (!process.env[key]) {
+        process.env[key] = val;
+      }
+    }
+  }
+}
+
 import { prisma } from '../src/lib/db';
-import fs from 'fs';
-import path from 'path';
 
 async function backupDatabase() {
   console.log('🔄 Memulai Backup Database Turso Cloud ke Local PC...');
