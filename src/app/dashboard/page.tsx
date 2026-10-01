@@ -19,7 +19,10 @@ import {
   Award,
   ChevronRight,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
+import { isJuanUser } from '@/lib/permissions';
+import ManualDutyModal from '@/components/duty/ManualDutyModal';
 import {
   formatIndonesianDate,
   formatIndonesianTime,
@@ -37,6 +40,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [errorState, setErrorState] = useState<boolean>(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -181,15 +185,28 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {user?.role === 'ADMIN' && (
-                <Link
-                  href="/admin"
-                  className="text-xs font-bold text-brand-400 hover:text-brand-300 flex items-center gap-1"
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  Buka Panel Admin &rarr;
-                </Link>
-              )}
+              <div className="flex items-center gap-2">
+                {isJuanUser(user) && (
+                  <button
+                    onClick={() => setIsManualModalOpen(true)}
+                    className="px-3 py-1 bg-brand-950/90 hover:bg-brand-900 border border-brand-500/50 text-brand-400 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                    title="Input Jam Duty Manual / Tanggal Lampau"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Input Absen Manual</span>
+                  </button>
+                )}
+
+                {user?.role === 'ADMIN' && (
+                  <Link
+                    href="/admin"
+                    className="text-xs font-bold text-brand-400 hover:text-brand-300 flex items-center gap-1"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    Buka Panel Admin &rarr;
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
 
@@ -241,13 +258,25 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              <Link
-                href="/duty-in"
-                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-600 via-red-600 to-brand-700 hover:from-brand-500 hover:to-red-500 text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-brand-600/40 flex items-center justify-center gap-3 transform hover:scale-[1.02] active:scale-95 transition-all"
-              >
-                <Play className="w-6 h-6 fill-current" />
-                <span>MULAI DUTY SEKARANG</span>
-              </Link>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/duty-in"
+                  className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-600 via-red-600 to-brand-700 hover:from-brand-500 hover:to-red-500 text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-brand-600/40 flex items-center justify-center gap-3 transform hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  <Play className="w-6 h-6 fill-current" />
+                  <span>MULAI DUTY SEKARANG</span>
+                </Link>
+
+                {isJuanUser(user) && (
+                  <button
+                    onClick={() => setIsManualModalOpen(true)}
+                    className="w-full sm:w-auto px-6 py-4 bg-slate-900/90 hover:bg-slate-800 border border-brand-500/50 text-brand-400 hover:text-brand-300 font-extrabold text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95"
+                  >
+                    <Sparkles className="w-5 h-5 text-brand-400" />
+                    <span>INPUT MANUAL (BACKDATE)</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             /* SEDANG DUTY STATE */
@@ -373,6 +402,15 @@ export default function DashboardPage() {
         imageUrl={selectedScreenshot}
         onClose={() => setSelectedScreenshot(null)}
       />
+
+      {/* Exclusive Manual Duty & Backdate Modal for ASE Juan */}
+      {isJuanUser(user) && (
+        <ManualDutyModal
+          isOpen={isManualModalOpen}
+          onClose={() => setIsManualModalOpen(false)}
+          onSuccess={() => fetchDashboardData()}
+        />
+      )}
     </div>
   );
 }
