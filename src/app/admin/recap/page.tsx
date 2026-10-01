@@ -186,25 +186,41 @@ export default function AdminRecapPage() {
                 Rekapitulasi Jam Duty & Ekspor Laporan
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Statistik rekapitulasi jam duty per tanggal, per minggu, dan per bulan serta unduh Excel.
+                Statistik rekapitulasi jam duty per tanggal, per minggu, dan per bulan serta unduh Excel multi-sheet.
               </p>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
+                  ⏱️ Rekap & Sesi Duty
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-950/80 text-indigo-400 border border-indigo-500/30">
+                  🏖️ Rekap Izin & Cuti
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-950/80 text-teal-400 border border-teal-500/30">
+                  📝 Rekap Laporan Anggota
+                </span>
+              </div>
             </div>
 
             {/* Export Action Buttons */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleExport('excel')}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all"
+                className="group relative px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-900/40 flex items-center gap-2 transition-all transform active:scale-95"
+                title="Unduh 1 file Excel lengkap berisi 4 Sheet (Rekap Harian, Detail Sesi, Izin & Cuti, dan Laporan Anggota)"
               >
-                <Download className="w-4 h-4" />
-                <span>UNDUH EXCEL (.XLSX)</span>
+                <Download className="w-4 h-4 text-emerald-100 group-hover:animate-bounce" />
+                <div className="text-left">
+                  <div className="leading-tight">UNDUH EXCEL LENGKAP</div>
+                  <div className="text-[9px] font-medium text-emerald-100 opacity-90">4 Sheet Komprehensif</div>
+                </div>
               </button>
 
               <button
                 onClick={() => handleExport('csv')}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 transition-all"
+                className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
+                title="Unduh format CSV ringkas"
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 h-4 text-slate-400" />
                 <span>CSV</span>
               </button>
             </div>

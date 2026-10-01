@@ -24,6 +24,7 @@ import {
   MessageSquare,
   RefreshCw,
   ImageIcon,
+  Download,
 } from 'lucide-react';
 
 interface ReportItem {
@@ -211,12 +212,24 @@ export default function AdminReportsPage() {
               </p>
             </div>
 
-            <button
-              onClick={fetchReports}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 font-bold text-xs transition-all shadow-md self-start sm:self-auto"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href="/api/admin/export?format=excel&period=all"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs transition-all shadow-md shadow-teal-600/30"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Ekspor Excel (.XLSX)</span>
+              </a>
+
+              <button
+                onClick={fetchReports}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 font-bold text-xs transition-all shadow-md self-start sm:self-auto"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
+              </button>
+            </div>
           </div>
 
           {/* Filters Bar */}

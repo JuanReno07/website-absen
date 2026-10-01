@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import ScreenshotModal from '@/components/duty/ScreenshotModal';
-import { Calendar, Search, CheckCircle, XCircle, ExternalLink, Filter, X } from 'lucide-react';
+import { Calendar, Search, CheckCircle, XCircle, ExternalLink, Filter, X, Download } from 'lucide-react';
 import { formatIndonesianDate, formatDateDMY } from '@/lib/utils';
 
 export default function AdminLeavesPage() {
@@ -106,6 +106,18 @@ export default function AdminLeavesPage() {
               <p className="text-xs text-slate-400 mt-0.5">
                 Kelola dan berikan persetujuan atau penolakan pengajuan izin anggota.
               </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <a
+                href="/api/admin/export?format=excel&period=all"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/30"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Ekspor Excel (.XLSX)</span>
+              </a>
             </div>
           </div>
 

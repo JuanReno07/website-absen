@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { formatIndonesianDate, formatIndonesianTime, formatDurationMinutes } from './utils';
+import { formatIndonesianDate, formatIndonesianTime, formatDurationMinutes, formatDateDMY } from './utils';
 
 export interface AttendanceExportRecord {
   id: string;
@@ -15,9 +15,45 @@ export interface AttendanceExportRecord {
   admin_note: string | null;
 }
 
+export interface LeaveExportRecord {
+  id: string;
+  discord_name: string;
+  position_name: string;
+  ooc_name: string;
+  steam_hex: string;
+  leave_type: string;
+  start_date: Date;
+  end_date: Date;
+  reason: string;
+  attachment: string | null;
+  status: string;
+  admin_note: string | null;
+  approved_by: string | null;
+  approved_at: Date | null;
+  created_at: Date;
+}
+
+export interface ReportExportRecord {
+  id: string;
+  discord_name: string;
+  position_name: string;
+  ooc_name: string;
+  steam_hex: string;
+  title: string;
+  category: string;
+  content: string;
+  status: string;
+  admin_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: Date | null;
+  created_at: Date;
+}
+
 export async function generateAttendanceExcel(
   records: AttendanceExportRecord[],
-  periodLabel: string = 'Semua Waktu'
+  periodLabel: string = 'Semua Waktu',
+  leaveRecords: LeaveExportRecord[] = [],
+  reportRecords: ReportExportRecord[] = []
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'ASE Roleplay Duty System';
@@ -318,6 +354,329 @@ export async function generateAttendanceExcel(
     { width: 18 }, // Total Harian
     { width: 18 }, // Target 3 Jam
     { width: 20 }, // Status Duty
+  ];
+
+  // ==========================================
+  // SHEET 3: REKAP PENGAJUAN IZIN & CUTI ANGGOTA
+  // ==========================================
+  const sheetLeaves = workbook.addWorksheet('Rekap Izin & Cuti');
+
+  sheetLeaves.mergeCells('A1:L1');
+  const title3 = sheetLeaves.getCell('A1');
+  title3.value = 'REKAPITULASI PENGAJUAN IZIN & CUTI ANGGOTA - ASE ROLEPLAY';
+  title3.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+  title3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4338CA' } }; // Indigo 700
+  title3.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetLeaves.getRow(1).height = 40;
+
+  sheetLeaves.mergeCells('A2:L2');
+  const sub3 = sheetLeaves.getCell('A2');
+  sub3.value = `Periode: ${periodLabel} | Ekspor: ${formatIndonesianDate(new Date())} | Total Pengajuan: ${leaveRecords.length} Izin`;
+  sub3.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF475569' } };
+  sub3.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetLeaves.getRow(2).height = 22;
+
+  // KPI Metrics Banner for Leaves
+  const approvedLeaves = leaveRecords.filter((l) => l.status === 'DISETUJUI').length;
+  const pendingLeaves = leaveRecords.filter((l) => l.status === 'MENUNGGU_PERSETUJUAN').length;
+  const rejectedLeaves = leaveRecords.filter((l) => l.status === 'DITOLAK').length;
+
+  sheetLeaves.mergeCells('A4:C4');
+  const lkpi1 = sheetLeaves.getCell('A4');
+  lkpi1.value = `TOTAL PENGAJUAN: ${leaveRecords.length}`;
+  lkpi1.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  lkpi1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+  lkpi1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheetLeaves.mergeCells('D4:F4');
+  const lkpi2 = sheetLeaves.getCell('D4');
+  lkpi2.value = `DISETUJUI: ${approvedLeaves}`;
+  lkpi2.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  lkpi2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF15803D' } }; // Emerald
+  lkpi2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheetLeaves.mergeCells('G4:I4');
+  const lkpi3 = sheetLeaves.getCell('G4');
+  lkpi3.value = `MENUNGGU PERSETUJUAN: ${pendingLeaves}`;
+  lkpi3.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  lkpi3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB45309' } }; // Amber
+  lkpi3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheetLeaves.mergeCells('J4:L4');
+  const lkpi4 = sheetLeaves.getCell('J4');
+  lkpi4.value = `DITOLAK: ${rejectedLeaves}`;
+  lkpi4.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  lkpi4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBE123C' } }; // Rose
+  lkpi4.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetLeaves.getRow(4).height = 24;
+
+  sheetLeaves.getRow(5).height = 10;
+
+  const headersLeaves = [
+    'No',
+    'Nama Discord',
+    'Jabatan',
+    'Nama OOC',
+    'Steam Hex',
+    'Jenis Izin',
+    'Tanggal Mulai',
+    'Tanggal Selesai',
+    'Durasi (Hari)',
+    'Alasan Pengajuan',
+    'Status Pengajuan',
+    'Disetujui Oleh & Catatan',
+  ];
+
+  const headerRow3 = sheetLeaves.addRow(headersLeaves);
+  headerRow3.height = 26;
+  headerRow3.eachCell((cell) => {
+    cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF334155' } },
+      bottom: { style: 'medium', color: { argb: 'FF4338CA' } },
+      left: { style: 'thin', color: { argb: 'FF334155' } },
+      right: { style: 'thin', color: { argb: 'FF334155' } },
+    };
+  });
+
+  leaveRecords.forEach((l, idx) => {
+    const sDate = new Date(l.start_date);
+    const eDate = new Date(l.end_date);
+    const diffDays = Math.max(1, Math.round((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+    let statusDisplay = l.status;
+    if (l.status === 'DISETUJUI') statusDisplay = 'Disetujui';
+    else if (l.status === 'MENUNGGU_PERSETUJUAN') statusDisplay = 'Menunggu Persetujuan';
+    else if (l.status === 'DITOLAK') statusDisplay = 'Ditolak';
+
+    const approvalNote = l.admin_note
+      ? `${l.approved_by ? `Oleh: ${l.approved_by} - ` : ''}${l.admin_note}`
+      : l.approved_by ? `Disetujui oleh: ${l.approved_by}` : '-';
+
+    const row = sheetLeaves.addRow([
+      idx + 1,
+      l.discord_name,
+      l.position_name,
+      l.ooc_name,
+      l.steam_hex,
+      l.leave_type,
+      formatDateDMY(l.start_date),
+      formatDateDMY(l.end_date),
+      `${diffDays} Hari`,
+      l.reason,
+      statusDisplay,
+      approvalNote,
+    ]);
+
+    row.height = 24;
+    const isEven = idx % 2 === 0;
+    const bg = isEven ? 'FFFFFFFF' : 'FFF8FAFC';
+
+    row.eachCell((cell, colNum) => {
+      cell.font = { name: 'Arial', size: 10 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: colNum === 1 || colNum === 6 || colNum === 7 || colNum === 8 || colNum === 9 || colNum === 11 ? 'center' : 'left',
+      };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      };
+
+      if (colNum === 11) {
+        if (l.status === 'DISETUJUI') {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF15803D' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
+        } else if (l.status === 'MENUNGGU_PERSETUJUAN') {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFB45309' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+        } else {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFB91C1C' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+        }
+      }
+    });
+  });
+
+  sheetLeaves.columns = [
+    { width: 6 },  // No
+    { width: 24 }, // Discord
+    { width: 22 }, // Jabatan
+    { width: 22 }, // OOC
+    { width: 24 }, // Steam Hex
+    { width: 20 }, // Jenis Izin
+    { width: 16 }, // Mulai
+    { width: 16 }, // Selesai
+    { width: 14 }, // Durasi
+    { width: 34 }, // Alasan
+    { width: 24 }, // Status
+    { width: 30 }, // Admin Note
+  ];
+
+  // ==========================================
+  // SHEET 4: REKAP LAPORAN KEGIATAN & KEJADIAN ANGGOTA
+  // ==========================================
+  const sheetReports = workbook.addWorksheet('Rekap Laporan Anggota');
+
+  sheetReports.mergeCells('A1:K1');
+  const title4 = sheetReports.getCell('A1');
+  title4.value = 'REKAPITULASI LAPORAN KEGIATAN & KEJADIAN ANGGOTA - ASE ROLEPLAY';
+  title4.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+  title4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } }; // Teal 700
+  title4.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetReports.getRow(1).height = 40;
+
+  sheetReports.mergeCells('A2:K2');
+  const sub4 = sheetReports.getCell('A2');
+  sub4.value = `Periode: ${periodLabel} | Ekspor: ${formatIndonesianDate(new Date())} | Total Laporan: ${reportRecords.length} Laporan`;
+  sub4.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF475569' } };
+  sub4.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetReports.getRow(2).height = 22;
+
+  // KPI Metrics Banner for Reports
+  const doneReports = reportRecords.filter((r) => r.status === 'SELESAI').length;
+  const processReports = reportRecords.filter((r) => r.status === 'DIPROSES').length;
+  const pendingReports = reportRecords.filter((r) => r.status === 'MENUNGGU_DITANGGAPI').length;
+  const rejectedReports = reportRecords.filter((r) => r.status === 'DITOLAK').length;
+
+  sheetReports.mergeCells('A4:C4');
+  const rkpi1 = sheetReports.getCell('A4');
+  rkpi1.value = `TOTAL LAPORAN: ${reportRecords.length}`;
+  rkpi1.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  rkpi1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+  rkpi1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheetReports.mergeCells('D4:E4');
+  const rkpi2 = sheetReports.getCell('D4');
+  rkpi2.value = `SELESAI: ${doneReports}`;
+  rkpi2.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  rkpi2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF15803D' } }; // Emerald
+  rkpi2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheetReports.mergeCells('F4:H4');
+  const rkpi3 = sheetReports.getCell('F4');
+  rkpi3.value = `DIPROSES: ${processReports}`;
+  rkpi3.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  rkpi3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } }; // Sky
+  rkpi3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  sheetReports.mergeCells('I4:K4');
+  const rkpi4 = sheetReports.getCell('I4');
+  rkpi4.value = `MENUNGGU: ${pendingReports}`;
+  rkpi4.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  rkpi4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB45309' } }; // Amber
+  rkpi4.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetReports.getRow(4).height = 24;
+
+  sheetReports.getRow(5).height = 10;
+
+  const headersReports = [
+    'No',
+    'Tanggal Lapor',
+    'Nama Discord',
+    'Jabatan',
+    'Nama OOC',
+    'Steam Hex',
+    'Kategori',
+    'Judul Laporan',
+    'Isi Laporan',
+    'Status Laporan',
+    'Tindak Lanjut & Ditanggapi Oleh',
+  ];
+
+  const headerRow4 = sheetReports.addRow(headersReports);
+  headerRow4.height = 26;
+  headerRow4.eachCell((cell) => {
+    cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF334155' } },
+      bottom: { style: 'medium', color: { argb: 'FF0F766E' } },
+      left: { style: 'thin', color: { argb: 'FF334155' } },
+      right: { style: 'thin', color: { argb: 'FF334155' } },
+    };
+  });
+
+  reportRecords.forEach((r, idx) => {
+    let statusText = r.status;
+    if (r.status === 'SELESAI') statusText = 'Selesai';
+    else if (r.status === 'DIPROSES') statusText = 'Sedang Diproses';
+    else if (r.status === 'MENUNGGU_DITANGGAPI') statusText = 'Menunggu Tanggapan';
+    else if (r.status === 'DITOLAK') statusText = 'Ditolak';
+
+    const actionNote = r.admin_note
+      ? `${r.reviewed_by ? `Oleh: ${r.reviewed_by} - ` : ''}${r.admin_note}`
+      : r.reviewed_by ? `Ditanggapi oleh: ${r.reviewed_by}` : '-';
+
+    const row = sheetReports.addRow([
+      idx + 1,
+      formatDateDMY(r.created_at),
+      r.discord_name,
+      r.position_name,
+      r.ooc_name,
+      r.steam_hex,
+      r.category,
+      r.title,
+      r.content,
+      statusText,
+      actionNote,
+    ]);
+
+    row.height = 26;
+    const isEven = idx % 2 === 0;
+    const bg = isEven ? 'FFFFFFFF' : 'FFF8FAFC';
+
+    row.eachCell((cell, colNum) => {
+      cell.font = { name: 'Arial', size: 10 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: colNum === 1 || colNum === 2 || colNum === 7 || colNum === 10 ? 'center' : 'left',
+        wrapText: colNum === 9 || colNum === 11,
+      };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      };
+
+      if (colNum === 10) {
+        if (r.status === 'SELESAI') {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF15803D' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
+        } else if (r.status === 'DIPROSES') {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF0284C7' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+        } else if (r.status === 'MENUNGGU_DITANGGAPI') {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFB45309' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+        } else {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFB91C1C' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+        }
+      }
+    });
+  });
+
+  sheetReports.columns = [
+    { width: 6 },  // No
+    { width: 16 }, // Tanggal
+    { width: 24 }, // Discord
+    { width: 22 }, // Jabatan
+    { width: 22 }, // OOC
+    { width: 24 }, // Steam Hex
+    { width: 22 }, // Kategori
+    { width: 28 }, // Judul
+    { width: 44 }, // Isi Laporan
+    { width: 22 }, // Status
+    { width: 32 }, // Tindak Lanjut
   ];
 
   const buffer = await workbook.xlsx.writeBuffer();
