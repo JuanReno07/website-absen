@@ -9,8 +9,9 @@ function getPrismaClient(): PrismaClient {
     return globalForPrisma.prisma;
   }
 
-  const tursoUrl = process.env.TURSO_DATABASE_URL;
-  const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
+  const useLocalDb = process.env.USE_LOCAL_DB === 'true';
+  const tursoUrl = useLocalDb ? undefined : process.env.TURSO_DATABASE_URL;
+  const tursoAuthToken = useLocalDb ? undefined : process.env.TURSO_AUTH_TOKEN;
 
   let client: PrismaClient;
 

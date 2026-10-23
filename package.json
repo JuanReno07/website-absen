@@ -10,6 +10,7 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:push-cloud": "npx tsx scripts/sync-local-to-turso.ts",
+    "db:pull-cloud": "npx tsx scripts/sync-cloud-to-local.ts",
     "db:backup": "npx tsx scripts/backup-db.ts",
     "db:restore": "npx tsx scripts/restore-from-backup.ts"
   },

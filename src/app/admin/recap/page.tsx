@@ -17,6 +17,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { formatDurationMinutes, formatIndonesianDate } from '@/lib/utils';
+import DatePickerDMY from '@/components/ui/DatePickerDMY';
 
 export default function AdminRecapPage() {
   const [user, setUser] = useState<any>(null);
@@ -266,24 +267,23 @@ export default function AdminRecapPage() {
                 className="pt-3 border-t border-slate-800 flex flex-wrap items-center gap-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-semibold">Dari Tanggal (DD/MM/YYYY):</span>
-                  <input
-                    type="date"
+                  <span className="text-xs text-slate-400 font-semibold">Dari:</span>
+                  <DatePickerDMY
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    onClick={(e) => e.currentTarget.showPicker?.()}
-                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500"
+                    onChange={(val) => setStartDate(val)}
+                    className="py-1 px-3 text-xs"
+                    placeholder="DD/MM/YYYY"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-semibold">Sampai Tanggal (DD/MM/YYYY):</span>
-                  <input
-                    type="date"
+                  <span className="text-xs text-slate-400 font-semibold">Sampai:</span>
+                  <DatePickerDMY
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    onClick={(e) => e.currentTarget.showPicker?.()}
-                    className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500"
+                    min={startDate}
+                    onChange={(val) => setEndDate(val)}
+                    className="py-1 px-3 text-xs"
+                    placeholder="DD/MM/YYYY"
                   />
                 </div>
 

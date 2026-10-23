@@ -186,16 +186,14 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {isJuanUser(user) && (
-                  <button
-                    onClick={() => setIsManualModalOpen(true)}
-                    className="px-3 py-1 bg-brand-950/90 hover:bg-brand-900 border border-brand-500/50 text-brand-400 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
-                    title="Input Jam Duty Manual / Tanggal Lampau"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-brand-400" />
-                    <span>Input Absen Manual</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => setIsManualModalOpen(true)}
+                  className="px-3 py-1 bg-brand-950/90 hover:bg-brand-900 border border-brand-500/50 text-brand-400 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                  title={isJuanUser(user) || user?.role === 'ADMIN' ? "Input Jam Duty Manual / Tanggal Lampau" : "Ajukan Absen Manual (Approval Admin)"}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-brand-400" />
+                  <span>{isJuanUser(user) || user?.role === 'ADMIN' ? 'Input Absen Manual' : 'Ajukan Absen Manual'}</span>
+                </button>
 
                 {user?.role === 'ADMIN' && (
                   <Link
@@ -258,24 +256,24 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
                 <Link
                   href="/duty-in"
-                  className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-600 via-red-600 to-brand-700 hover:from-brand-500 hover:to-red-500 text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-brand-600/40 flex items-center justify-center gap-3 transform hover:scale-[1.02] active:scale-95 transition-all"
+                  className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-600 via-red-600 to-brand-700 hover:from-brand-500 hover:to-red-500 text-white font-extrabold text-base sm:text-lg rounded-2xl shadow-xl shadow-brand-600/40 flex items-center justify-center gap-3 transform hover:scale-[1.02] active:scale-95 transition-all"
                 >
                   <Play className="w-6 h-6 fill-current" />
                   <span>MULAI DUTY SEKARANG</span>
                 </Link>
 
-                {isJuanUser(user) && (
-                  <button
-                    onClick={() => setIsManualModalOpen(true)}
-                    className="w-full sm:w-auto px-6 py-4 bg-slate-900/90 hover:bg-slate-800 border border-brand-500/50 text-brand-400 hover:text-brand-300 font-extrabold text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95"
-                  >
-                    <Sparkles className="w-5 h-5 text-brand-400" />
-                    <span>INPUT MANUAL (BACKDATE)</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setIsManualModalOpen(true)}
+                  className="w-full sm:w-auto px-6 py-4 bg-slate-900/90 hover:bg-slate-800 border border-amber-500/60 hover:border-amber-400 text-amber-400 hover:text-amber-300 font-extrabold text-sm sm:text-base rounded-2xl shadow-lg shadow-amber-950/40 flex items-center justify-center gap-2.5 transition-all transform hover:scale-[1.02] active:scale-95"
+                  title={isJuanUser(user) || user?.role === 'ADMIN' ? 'Input Absen Manual / Tanggal Lampau (Admin Direct)' : 'Ajukan Sesi Absen Manual (Approval Admin)'}
+                >
+                  <Sparkles className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <span>{isJuanUser(user) || user?.role === 'ADMIN' ? 'INPUT MANUAL (ADMIN)' : 'AJUKAN ABSEN MANUAL'}</span>
+                </button>
               </div>
             </div>
           ) : (
@@ -403,14 +401,13 @@ export default function DashboardPage() {
         onClose={() => setSelectedScreenshot(null)}
       />
 
-      {/* Exclusive Manual Duty & Backdate Modal for ASE Juan */}
-      {isJuanUser(user) && (
-        <ManualDutyModal
-          isOpen={isManualModalOpen}
-          onClose={() => setIsManualModalOpen(false)}
-          onSuccess={() => fetchDashboardData()}
-        />
-      )}
+      {/* Manual Duty Modal (Approval workflow for members, direct entry for admin/Juan) */}
+      <ManualDutyModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onSuccess={() => fetchDashboardData()}
+        isAdminOrJuan={isJuanUser(user) || user?.role === 'ADMIN'}
+      />
     </div>
   );
 }

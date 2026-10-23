@@ -6,6 +6,7 @@ import ClipboardUploadArea from '@/components/duty/ClipboardUploadArea';
 import ScreenshotModal from '@/components/duty/ScreenshotModal';
 import { Calendar, FileText, Send, CheckCircle2, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import { formatIndonesianDate, formatDateDMY } from '@/lib/utils';
+import DatePickerDMY from '@/components/ui/DatePickerDMY';
 
 export default function MemberLeavePage() {
   const [user, setUser] = useState<any>(null);
@@ -193,26 +194,17 @@ export default function MemberLeavePage() {
                   <span>Tanggal Mulai</span>
                   <span className="text-[10px] text-brand-400 font-semibold tracking-wider">DD/MM/YYYY</span>
                 </label>
-                <input
-                  type="date"
+                <DatePickerDMY
                   value={startDate}
                   min={todayStr || undefined}
-                  onChange={(e) => {
-                    const newStart = e.target.value;
+                  onChange={(newStart) => {
                     setStartDate(newStart);
                     if (endDate && newStart > endDate) {
                       setEndDate(newStart);
                     }
                   }}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
                   required
-                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-medium cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500 transition-colors"
                 />
-                {startDate && (
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Format: <span className="text-emerald-400 font-bold">{formatDateDMY(startDate)}</span>
-                  </p>
-                )}
               </div>
 
               <div>
@@ -220,20 +212,12 @@ export default function MemberLeavePage() {
                   <span>Tanggal Selesai</span>
                   <span className="text-[10px] text-brand-400 font-semibold tracking-wider">DD/MM/YYYY</span>
                 </label>
-                <input
-                  type="date"
+                <DatePickerDMY
                   value={endDate}
                   min={startDate || todayStr || undefined}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  onChange={(val) => setEndDate(val)}
                   required
-                  className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 font-medium cursor-pointer [color-scheme:dark] focus:outline-none focus:border-brand-500 transition-colors"
                 />
-                {endDate && (
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Format: <span className="text-emerald-400 font-bold">{formatDateDMY(endDate)}</span>
-                  </p>
-                )}
               </div>
 
               <div>

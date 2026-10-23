@@ -13,16 +13,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Anda harus login terlebih dahulu.' }, { status: 401 });
     }
 
-    // Strict security check: Exclusive to ASE Juan
-    if (!isJuanUser(user)) {
-      return NextResponse.json(
-        { error: 'Akses ditolak. Fitur ini hanya diperuntukkan bagi user ASE Juan.' },
-        { status: 403 }
-      );
-    }
+    // Check if user has direct bypass privilege (Juan or Admin)
+    const isDirectAdmin = isJuanUser(user) || user.role === 'ADMIN';
 
     const body = await request.json();
     const { duty_in_time, duty_out_time, screenshot_in_base64, screenshot_out_base64, user_note } = body;
+
+    // Regular members must provide a reason/explanation
+    if (!isDirectAdmin && (!user_note || !user_note.trim())) {
+      return NextResponse.json(
+        { error: 'Harap cantumkan alasan atau penjelasan pengajuan absen manual.' },
+        { status: 400 }
+      );
+    }
 
     if (!duty_in_time || !duty_out_time) {
       return NextResponse.json(
@@ -60,6 +63,10 @@ export async function POST(request: Request) {
       outScreenshotPath = await saveScreenshotFile(screenshot_out_base64, user.id, 'duty-out');
     }
 
+    const status = isDirectAdmin ? 'DUTY_SELESAI' : 'PERLU_PEMERIKSAAN';
+    const notePrefix = isDirectAdmin ? '' : '[Pengajuan Manual Member] ';
+    const finalNote = user_note ? `${notePrefix}${user_note.trim()}` : (isDirectAdmin ? 'Input Manual Backdate (Admin)' : 'Pengajuan Absen Manual');
+
     const attendance = await prisma.attendance.create({
       data: {
         user_id: user.id,
@@ -68,14 +75,19 @@ export async function POST(request: Request) {
         duration_minutes: durationMinutes,
         duty_in_screenshot: inScreenshotPath,
         duty_out_screenshot: outScreenshotPath,
-        status: 'DUTY_SELESAI',
-        user_note: user_note ? user_note.trim() : 'Input Manual Backdate (ASE Juan)',
+        status: status,
+        user_note: finalNote,
+        reviewed_by: isDirectAdmin ? user.id : null,
+        reviewed_at: isDirectAdmin ? new Date() : null,
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Absensi manual berhasil disimpan ke database.',
+      message: isDirectAdmin
+        ? 'Absensi manual berhasil disimpan ke database (Status: Selesai).'
+        : 'Pengajuan absen manual Anda berhasil dikirim dan berstatus "Perlu Pemeriksaan". Menunggu persetujuan Admin.',
+      status,
       attendance,
     });
   } catch (error: any) {

@@ -35,18 +35,23 @@ export function calculateDurationInMinutes(startDate: Date, endDate: Date): numb
 }
 
 /**
- * Formats a Date object to Indonesian local time format (Asia/Jakarta)
+ * Formats a Date object strictly to DD/MM/YYYY (e.g. "23/10/2026")
+ * Uses Asia/Jakarta timezone.
  */
 export function formatIndonesianDate(dateInput: string | Date | null | undefined): string {
   if (!dateInput) return '-';
-  const date = new Date(dateInput);
-  return new Intl.DateTimeFormat('id-ID', {
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '-';
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Jakarta',
-    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
+  }).formatToParts(d);
+  const day = parts.find((p) => p.type === 'day')?.value || String(d.getDate()).padStart(2, '0');
+  const month = parts.find((p) => p.type === 'month')?.value || String(d.getMonth() + 1).padStart(2, '0');
+  const year = parts.find((p) => p.type === 'year')?.value || String(d.getFullYear());
+  return `${day}/${month}/${year}`;
 }
 
 export function formatIndonesianTime(dateInput: string | Date | null | undefined): string {
@@ -67,16 +72,10 @@ export function formatIndonesianDateTime(dateInput: string | Date | null | undef
 }
 
 /**
- * Formats a Date strictly to DD/MM/YYYY (e.g. "03/09/2026")
+ * Formats a Date strictly to DD/MM/YYYY (e.g. "23/10/2026")
  */
 export function formatDateDMY(dateInput: string | Date | null | undefined): string {
-  if (!dateInput) return '-';
-  const d = new Date(dateInput);
-  if (isNaN(d.getTime())) return '-';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  return formatIndonesianDate(dateInput);
 }
 
 export const DUTY_STATUS_CONFIG: Record<
