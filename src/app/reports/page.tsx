@@ -24,6 +24,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { compressImage } from '@/lib/imageUtils';
+import { formatIndonesianDateTime } from '@/lib/utils';
 
 interface ReportItem {
   id: string;
@@ -533,10 +534,7 @@ export default function UserReportsPage() {
                             <Tag className="w-3 h-3 text-red-400" /> {report.category}
                           </span>
                           <span className="text-xs text-slate-400">
-                            {new Date(report.created_at).toLocaleString('id-ID', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })}
+                            {formatIndonesianDateTime(report.created_at)}
                           </span>
                         </div>
 
@@ -590,7 +588,7 @@ export default function UserReportsPage() {
                   </div>
                   <h2 className="text-xl font-bold text-white">{selectedReport.title}</h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    Dikirim pada: {new Date(selectedReport.created_at).toLocaleString('id-ID')}
+                    Dikirim pada: {formatIndonesianDateTime(selectedReport.created_at)}
                   </p>
                 </div>
                 <button

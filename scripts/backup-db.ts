@@ -116,7 +116,8 @@ async function backupDatabase() {
     users.forEach((u) => {
       const avatar = u.avatar ? `'${u.avatar.replace(/'/g, "''")}'` : 'NULL';
       const lastLogin = u.last_login_at ? `'${u.last_login_at.toISOString()}'` : 'NULL';
-      sqlDump += `INSERT OR REPLACE INTO "User" ("id", "username", "password_hash", "discord_name", "position_id", "ooc_name", "steam_hex", "avatar", "role", "is_active", "last_login_at", "created_at", "updated_at") VALUES ('${u.id}', '${u.username.replace(/'/g, "''")}', '${u.password_hash}', '${u.discord_name.replace(/'/g, "''")}', '${u.position_id}', '${u.ooc_name.replace(/'/g, "''")}', '${u.steam_hex}', ${avatar}, '${u.role}', ${u.is_active ? 1 : 0}, ${lastLogin}, '${u.created_at.toISOString()}', '${u.updated_at.toISOString()}');\n`;
+      const sessionVersion = (u as any).session_version !== undefined ? (u as any).session_version : 1;
+      sqlDump += `INSERT OR REPLACE INTO "User" ("id", "username", "password_hash", "discord_name", "position_id", "ooc_name", "steam_hex", "avatar", "role", "session_version", "is_active", "last_login_at", "created_at", "updated_at") VALUES ('${u.id}', '${u.username.replace(/'/g, "''")}', '${u.password_hash}', '${u.discord_name.replace(/'/g, "''")}', '${u.position_id}', '${u.ooc_name.replace(/'/g, "''")}', '${u.steam_hex}', ${avatar}, '${u.role}', ${sessionVersion}, ${u.is_active ? 1 : 0}, ${lastLogin}, '${u.created_at.toISOString()}', '${u.updated_at.toISOString()}');\n`;
     });
 
     // Attendances SQL
@@ -162,11 +163,45 @@ async function backupDatabase() {
       sqlDump += `INSERT OR REPLACE INTO "UserReport" ("id", "user_id", "title", "category", "content", "screenshots", "status", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at") VALUES ('${r.id}', '${r.user_id}', '${r.title.replace(/'/g, "''")}', '${r.category.replace(/'/g, "''")}', '${r.content.replace(/'/g, "''")}', ${scr}, '${r.status}', ${aNote}, ${revBy}, ${revAt}, '${r.created_at.toISOString()}', '${r.updated_at.toISOString()}');\n`;
     });
 
+    // UserSessions SQL
+    userSessions.forEach((s) => {
+      const ip = s.ip_address ? `'${s.ip_address}'` : 'NULL';
+      const dt = s.device_type ? `'${s.device_type}'` : 'NULL';
+      const bn = s.browser_name ? `'${s.browser_name}'` : 'NULL';
+      const os = s.os_name ? `'${s.os_name}'` : 'NULL';
+      const ua = s.user_agent ? `'${s.user_agent.replace(/'/g, "''")}'` : 'NULL';
+      sqlDump += `INSERT OR REPLACE INTO "UserSession" ("id", "user_id", "token_id", "ip_address", "device_type", "browser_name", "os_name", "user_agent", "last_active", "is_active", "created_at") VALUES ('${s.id}', '${s.user_id}', '${s.token_id}', ${ip}, ${dt}, ${bn}, ${os}, ${ua}, '${s.last_active.toISOString()}', ${s.is_active ? 1 : 0}, '${s.created_at.toISOString()}');\n`;
+    });
+
     const sqlPath = path.join(backupDir, `db_backup_${timestampStr}.sql`);
     const latestSqlPath = path.join(backupDir, `latest_db_backup.sql`);
 
     fs.writeFileSync(sqlPath, sqlDump, 'utf-8');
     fs.writeFileSync(latestSqlPath, sqlDump, 'utf-8');
+
+    // Also backup .env file safely
+    const envSource = path.join(process.cwd(), '.env');
+    if (fs.existsSync(envSource)) {
+      const envBackupPath = path.join(backupDir, `env_backup_${timestampStr}.txt`);
+      const latestEnvPath = path.join(backupDir, `env_backup.txt`);
+      fs.copyFileSync(envSource, envBackupPath);
+      fs.copyFileSync(envSource, latestEnvPath);
+      console.log('🔐 File .env berhasil diamankan ke folder backups.');
+    }
+
+    // Also backup public/uploads if exists
+    const uploadsSource = path.join(process.cwd(), 'public', 'uploads');
+    const uploadsBackupDir = path.join(backupDir, 'uploads');
+    if (fs.existsSync(uploadsSource)) {
+      if (!fs.existsSync(uploadsBackupDir)) {
+        fs.mkdirSync(uploadsBackupDir, { recursive: true });
+      }
+      const files = fs.readdirSync(uploadsSource);
+      for (const file of files) {
+        fs.copyFileSync(path.join(uploadsSource, file), path.join(uploadsBackupDir, file));
+      }
+      console.log(`🖼️ Sebanyak ${files.length} file di public/uploads berhasil disalin ke backups/uploads.`);
+    }
 
     const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log('====================================================');

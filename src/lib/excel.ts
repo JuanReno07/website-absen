@@ -53,11 +53,19 @@ export async function generateAttendanceExcel(
   records: AttendanceExportRecord[],
   periodLabel: string = 'Semua Waktu',
   leaveRecords: LeaveExportRecord[] = [],
-  reportRecords: ReportExportRecord[] = []
+  reportRecords: ReportExportRecord[] = [],
+  pendingManualRecords: AttendanceExportRecord[] = []
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'ASE Roleplay Duty System';
   workbook.created = new Date();
+
+  // 1. Separate pending manual records from official duty records
+  const pendingList = pendingManualRecords.length > 0
+    ? pendingManualRecords
+    : records.filter((r) => r.status === 'PERLU_PEMERIKSAAN');
+
+  const officialRecords = records.filter((r) => r.status !== 'PERLU_PEMERIKSAAN');
 
   // ==========================================
   // SHEET 1: REKAP HARIAN PER ANGGOTA (PER TANGGAL)
@@ -78,7 +86,7 @@ export async function generateAttendanceExcel(
 
   const dailyMap: Record<string, DailyGroup> = {};
 
-  records.forEach((rec) => {
+  officialRecords.forEach((rec) => {
     const dateStr = new Date(rec.duty_in_time).toISOString().slice(0, 10);
     const key = `${rec.discord_name}_${dateStr}`;
 
@@ -104,7 +112,7 @@ export async function generateAttendanceExcel(
   const dailyList = Object.values(dailyMap).sort((a, b) => b.duty_in_time.getTime() - a.duty_in_time.getTime());
 
   // Calculate summary metrics
-  const totalDutyMinutesAll = records
+  const totalDutyMinutesAll = officialRecords
     .filter((r) => r.status === 'DUTY_SELESAI')
     .reduce((acc, curr) => acc + (curr.duration_minutes || 0), 0);
 
@@ -255,7 +263,7 @@ export async function generateAttendanceExcel(
 
   sheetDetail.mergeCells('A2:L2');
   const sub2 = sheetDetail.getCell('A2');
-  sub2.value = `Periode: ${periodLabel} | Total Sesi: ${records.length} Record Sesi`;
+  sub2.value = `Periode: ${periodLabel} | Total Sesi Sah: ${officialRecords.length} Record Sesi`;
   sub2.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF475569' } };
   sub2.alignment = { horizontal: 'center', vertical: 'middle' };
   sheetDetail.getRow(2).height = 22;
@@ -289,7 +297,7 @@ export async function generateAttendanceExcel(
     };
   });
 
-  records.forEach((rec, index) => {
+  officialRecords.forEach((rec, index) => {
     const dateStr = new Date(rec.duty_in_time).toISOString().slice(0, 10);
     const key = `${rec.discord_name}_${dateStr}`;
     const dayTotalMin = dailyMap[key] ? dailyMap[key].total_minutes : (rec.duration_minutes || 0);
@@ -354,6 +362,154 @@ export async function generateAttendanceExcel(
     { width: 18 }, // Total Harian
     { width: 18 }, // Target 3 Jam
     { width: 20 }, // Status Duty
+  ];
+
+  // ==========================================
+  // SHEET 3: REKAP PENGAJUAN ABSEN MANUAL (PENDING APPROVAL)
+  // ==========================================
+  const sheetManualPending = workbook.addWorksheet('Absen Manual (Pending)');
+
+  sheetManualPending.mergeCells('A1:L1');
+  const titlePending = sheetManualPending.getCell('A1');
+  titlePending.value = 'PENGAJUAN ABSEN MANUAL (MENUNGGU APPROVAL) - ASE ROLEPLAY';
+  titlePending.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+  titlePending.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97706' } }; // Amber 600
+  titlePending.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetManualPending.getRow(1).height = 40;
+
+  sheetManualPending.mergeCells('A2:L2');
+  const subPending = sheetManualPending.getCell('A2');
+  subPending.value = `Periode: ${periodLabel} | Ekspor: ${formatIndonesianDate(new Date())} | Total Pengajuan Pending: ${pendingList.length} Record`;
+  subPending.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF475569' } };
+  subPending.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheetManualPending.getRow(2).height = 22;
+
+  // Warning Banner Row 4
+  sheetManualPending.mergeCells('A4:L4');
+  const noticePending = sheetManualPending.getCell('A4');
+  noticePending.value = '⚠️ CATATAN: Pengajuan pada sheet ini masih berstatus PERLU PEMERIKSAAN. Durasi belum dihitung ke akumulasi jam kerja resmi sampai disetujui Admin.';
+  noticePending.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF92400E' } };
+  noticePending.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+  noticePending.alignment = { horizontal: 'center', vertical: 'middle' };
+  noticePending.border = {
+    top: { style: 'thin', color: { argb: 'FFF59E0B' } },
+    bottom: { style: 'thin', color: { argb: 'FFF59E0B' } },
+    left: { style: 'thin', color: { argb: 'FFF59E0B' } },
+    right: { style: 'thin', color: { argb: 'FFF59E0B' } },
+  };
+  sheetManualPending.getRow(4).height = 26;
+
+  sheetManualPending.getRow(5).height = 10;
+
+  const headersPending = [
+    'No',
+    'Nama Discord',
+    'Jabatan',
+    'Nama OOC',
+    'Steam Hex',
+    'Tanggal Masuk',
+    'Jam Masuk (IN)',
+    'Tanggal Keluar',
+    'Jam Keluar (OUT)',
+    'Estimasi Durasi',
+    'Alasan / Catatan Pengajuan',
+    'Status Approval',
+  ];
+
+  const headerRowPending = sheetManualPending.addRow(headersPending);
+  headerRowPending.height = 26;
+  headerRowPending.eachCell((cell) => {
+    cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF334155' } },
+      bottom: { style: 'medium', color: { argb: 'FFD97706' } },
+      left: { style: 'thin', color: { argb: 'FF334155' } },
+      right: { style: 'thin', color: { argb: 'FF334155' } },
+    };
+  });
+
+  if (pendingList.length === 0) {
+    const emptyRow = sheetManualPending.addRow([
+      '-',
+      'Tidak ada pengajuan absen manual yang pending pada periode ini.',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+      '-',
+    ]);
+    emptyRow.height = 24;
+    emptyRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF64748B' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+  } else {
+    pendingList.forEach((p, idx) => {
+      const row = sheetManualPending.addRow([
+        idx + 1,
+        p.discord_name,
+        p.position_name,
+        p.ooc_name,
+        p.steam_hex,
+        formatDateDMY(p.duty_in_time),
+        formatIndonesianTime(p.duty_in_time),
+        p.duty_out_time ? formatDateDMY(p.duty_out_time) : '-',
+        p.duty_out_time ? formatIndonesianTime(p.duty_out_time) : '-',
+        formatDurationMinutes(p.duration_minutes),
+        p.user_note || 'Pengajuan Absen Manual',
+        'PERLU PEMERIKSAAN (PENDING)',
+      ]);
+
+      row.height = 24;
+      const isEven = idx % 2 === 0;
+      const bg = isEven ? 'FFFFFFFF' : 'FFF8FAFC';
+
+      row.eachCell((cell, colNum) => {
+        cell.font = { name: 'Arial', size: 10 };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal:
+            colNum === 1 || colNum === 6 || colNum === 7 || colNum === 8 || colNum === 9 || colNum === 10 || colNum === 12
+              ? 'center'
+              : 'left',
+          wrapText: colNum === 11,
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+
+        if (colNum === 12) {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFB45309' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+        }
+      });
+    });
+  }
+
+  sheetManualPending.columns = [
+    { width: 6 },  // No
+    { width: 24 }, // Discord
+    { width: 20 }, // Jabatan
+    { width: 20 }, // OOC
+    { width: 24 }, // Steam Hex
+    { width: 18 }, // Tanggal IN
+    { width: 16 }, // Jam IN
+    { width: 18 }, // Tanggal OUT
+    { width: 16 }, // Jam OUT
+    { width: 18 }, // Durasi
+    { width: 36 }, // Alasan
+    { width: 28 }, // Status
   ];
 
   // ==========================================

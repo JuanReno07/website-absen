@@ -132,26 +132,30 @@ export default function DutyInPage() {
           </span>
         </div>
 
-        {/* Exclusive Backdate Banner for ASE Juan */}
-        {isJuanUser(user) && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-950 via-slate-900 to-slate-900 border border-brand-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-brand-400 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-bold text-slate-200">Akses Khusus ASE Juan Terdeteksi</p>
-                <p className="text-[11px] text-slate-400">Ingin menginput jam masuk/keluar secara manual atau tanggal lampau (backdate)?</p>
-              </div>
+        {/* Manual Duty Banner / Shortcut */}
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-950 via-slate-900 to-slate-900 border border-brand-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-brand-400 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-slate-200">
+                {isJuanUser(user) || user?.role === 'ADMIN' ? 'Akses Khusus Admin Terdeteksi' : 'Lupa Absen atau Mengalami Kendala Sesi Sebelumnya?'}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                {isJuanUser(user) || user?.role === 'ADMIN'
+                  ? 'Ingin menginput jam masuk/keluar secara manual atau tanggal lampau (backdate)?'
+                  : 'Anda dapat mengajukan absen manual susulan dengan menyertakan bukti untuk diverifikasi Admin.'}
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsManualModalOpen(true)}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Input Manual / Backdate</span>
-            </button>
           </div>
-        )}
+          <button
+            type="button"
+            onClick={() => setIsManualModalOpen(true)}
+            className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{isJuanUser(user) || user?.role === 'ADMIN' ? 'Input Manual / Backdate' : 'Ajukan Absen Manual'}</span>
+          </button>
+        </div>
 
         <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
@@ -217,33 +221,44 @@ export default function DutyInPage() {
               />
             </div>
 
-            {/* Confirm button */}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-4 bg-gradient-to-r from-brand-600 to-red-700 hover:from-brand-500 hover:to-red-600 text-white font-extrabold rounded-2xl shadow-xl shadow-brand-600/30 flex items-center justify-center gap-2 text-base transition-all disabled:opacity-50"
-            >
-              {submitting ? (
-                <span>Memulai Duty...</span>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>KONFIRMASI DUTY IN SEKARANG</span>
-                </>
-              )}
-            </button>
+            {/* Confirm button group */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 w-full py-4 bg-gradient-to-r from-brand-600 to-red-700 hover:from-brand-500 hover:to-red-600 text-white font-extrabold rounded-2xl shadow-xl shadow-brand-600/30 flex items-center justify-center gap-2 text-sm sm:text-base transition-all disabled:opacity-50"
+              >
+                {submitting ? (
+                  <span>Memulai Duty...</span>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>KONFIRMASI DUTY IN SEKARANG</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsManualModalOpen(true)}
+                className="w-full sm:w-auto px-5 py-4 bg-slate-900/90 hover:bg-slate-800 border border-amber-500/50 hover:border-amber-400 text-amber-400 hover:text-amber-300 font-extrabold rounded-2xl text-xs sm:text-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap shadow-lg"
+                title="Ajukan absensi manual jika ada kendala sistem atau lupa sesi sebelumnya"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span>{isJuanUser(user) || user?.role === 'ADMIN' ? 'Input Manual (Admin)' : 'Ajukan Absen Manual'}</span>
+              </button>
+            </div>
           </form>
         </div>
       </main>
 
       {/* Manual Duty Modal */}
-      {isJuanUser(user) && (
-        <ManualDutyModal
-          isOpen={isManualModalOpen}
-          onClose={() => setIsManualModalOpen(false)}
-          onSuccess={() => router.push('/dashboard')}
-        />
-      )}
+      <ManualDutyModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onSuccess={() => router.push('/dashboard')}
+        isAdminOrJuan={isJuanUser(user) || user?.role === 'ADMIN'}
+      />
     </div>
   );
 }

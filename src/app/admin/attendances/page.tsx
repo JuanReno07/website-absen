@@ -16,6 +16,7 @@ import {
   AlertCircle,
   X,
   FileText,
+  Check,
 } from 'lucide-react';
 import {
   formatIndonesianDate,
@@ -28,6 +29,7 @@ export default function AdminAttendancesPage() {
   const [user, setUser] = useState<any>(null);
   const [attendances, setAttendances] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [positionFilter, setPositionFilter] = useState('ALL');
@@ -43,6 +45,39 @@ export default function AdminAttendancesPage() {
   const [adminNote, setAdminNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handleQuickApprove = async (rec: any) => {
+    const confirmApprove = window.confirm(
+      `Setujui pengajuan absen manual untuk ${rec.user.discord_name} (${formatDurationMinutes(rec.duration_minutes)})? Status akan berubah menjadi DUTY SELESAI.`
+    );
+    if (!confirmApprove) return;
+
+    try {
+      const res = await fetch('/api/admin/attendances', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: rec.id,
+          status: 'DUTY_SELESAI',
+          admin_note: 'Disetujui oleh Admin',
+        }),
+      });
+      if (res.ok) {
+        fetchAttendances();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Gagal menyetujui pengajuan.');
+      }
+    } catch {
+      alert('Terjadi kesalahan koneksi.');
+    }
+  };
+
+  const handleQuickReject = (rec: any) => {
+    handleOpenEdit(rec);
+    setStatus('DIBATALKAN_ADMIN');
+    setAdminNote('Bukti screenshot tidak sesuai / pengajuan ditolak.');
+  };
 
   const fetchAttendances = async () => {
     try {
@@ -65,6 +100,7 @@ export default function AdminAttendancesPage() {
       if (res.ok) {
         const data = await res.json();
         setAttendances(data.attendances || []);
+        setStats(data.stats || null);
       } else if (res.status === 403 || res.status === 401) {
         window.location.href = '/dashboard';
       }
@@ -207,6 +243,22 @@ export default function AdminAttendancesPage() {
                 <option value="PERLU_PEMERIKSAAN">Perlu Pemeriksaan</option>
                 <option value="DIBATALKAN_ADMIN">Dibatalkan Admin</option>
               </select>
+
+              {stats?.pendingReviewCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'PERLU_PEMERIKSAAN' ? 'ALL' : 'PERLU_PEMERIKSAAN')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                    statusFilter === 'PERLU_PEMERIKSAAN'
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
+                      : 'bg-amber-950/80 border-amber-500/50 text-amber-300 hover:bg-amber-900/60'
+                  }`}
+                  title="Filter hanya pengajuan absen yang perlu pemeriksaan"
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                  <span>{stats.pendingReviewCount} Perlu Approval</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -253,9 +305,31 @@ export default function AdminAttendancesPage() {
                   ) : (
                     attendances.map((rec) => {
                     const cfg = DUTY_STATUS_CONFIG[rec.status] || DUTY_STATUS_CONFIG.BELUM_DUTY;
+                    const isPending = rec.status === 'PERLU_PEMERIKSAAN';
                     return (
-                      <tr key={rec.id} className="hover:bg-slate-900/40">
-                        <td className="p-3 font-bold text-slate-100">{rec.user.discord_name}</td>
+                      <tr
+                        key={rec.id}
+                        className={`transition-colors ${
+                          isPending
+                            ? 'bg-amber-950/20 hover:bg-amber-950/30 border-l-4 border-amber-500'
+                            : 'hover:bg-slate-900/40'
+                        }`}
+                      >
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-100">{rec.user.discord_name}</span>
+                            {isPending && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                Manual
+                              </span>
+                            )}
+                          </div>
+                          {rec.user_note && (
+                            <p className="text-[11px] text-slate-400 italic max-w-[200px] sm:max-w-xs truncate mt-0.5" title={rec.user_note}>
+                              {rec.user_note}
+                            </p>
+                          )}
+                        </td>
                         <td className="p-3 text-brand-400 font-semibold">{rec.user.position.name}</td>
                         <td className="p-3 font-mono text-slate-400">{rec.user.steam_hex}</td>
                         <td className="p-3">{formatIndonesianDate(rec.duty_in_time)}</td>
@@ -304,10 +378,30 @@ export default function AdminAttendancesPage() {
                           </div>
                         </td>
                         <td className="p-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {isPending && (
+                              <>
+                                <button
+                                  onClick={() => handleQuickApprove(rec)}
+                                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-sm transition-colors"
+                                  title="Setujui Pengajuan Absen Manual (Ubah ke Duty Selesai)"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Setujui
+                                </button>
+
+                                <button
+                                  onClick={() => handleQuickReject(rec)}
+                                  className="px-2 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-600/50 text-amber-300 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                                  title="Tolak Pengajuan Absen Manual"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Tolak
+                                </button>
+                              </>
+                            )}
+
                             <button
                               onClick={() => handleOpenEdit(rec)}
-                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
                               title="Edit / Koreksi Data"
                             >
                               <Edit2 className="w-3.5 h-3.5" /> Edit
@@ -315,7 +409,7 @@ export default function AdminAttendancesPage() {
 
                             <button
                               onClick={() => handleDeleteRecord(rec)}
-                              className="px-2.5 py-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-400 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                              className="px-2 py-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-400 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
                               title="Hapus History Duty"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Hapus

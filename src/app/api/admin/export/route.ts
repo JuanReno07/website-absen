@@ -79,7 +79,18 @@ export async function GET(request: Request) {
       periodLabel = `${startDateParam} s/d ${endDateParam}`;
     }
 
-    const [attendances, leaveRequests, userReports] = await Promise.all([
+    const pendingWhere: any = {
+      status: 'PERLU_PEMERIKSAAN',
+      deleted_at: null,
+    };
+    if (position_id && position_id !== 'ALL') {
+      pendingWhere.user = { position_id };
+    }
+    if (where.duty_in_time) {
+      pendingWhere.duty_in_time = where.duty_in_time;
+    }
+
+    const [attendances, leaveRequests, userReports, pendingManualAttendances] = await Promise.all([
       prisma.attendance.findMany({
         where,
         include: {
@@ -101,9 +112,30 @@ export async function GET(request: Request) {
         },
         orderBy: { created_at: 'desc' },
       }),
+      prisma.attendance.findMany({
+        where: pendingWhere,
+        include: {
+          user: { include: { position: true } },
+        },
+        orderBy: { duty_in_time: 'desc' },
+      }),
     ]);
 
     const exportRecords = attendances.map((a) => ({
+      id: a.id,
+      discord_name: a.user.discord_name,
+      position_name: a.user.position.name,
+      ooc_name: a.user.ooc_name,
+      steam_hex: a.user.steam_hex,
+      duty_in_time: a.duty_in_time,
+      duty_out_time: a.duty_out_time,
+      duration_minutes: a.duration_minutes,
+      status: a.status,
+      user_note: a.user_note,
+      admin_note: a.admin_note,
+    }));
+
+    const pendingExportRecords = pendingManualAttendances.map((a) => ({
       id: a.id,
       discord_name: a.user.discord_name,
       position_name: a.user.position.name,
@@ -184,7 +216,8 @@ export async function GET(request: Request) {
       exportRecords,
       periodLabel,
       leaveRecords,
-      reportRecords
+      reportRecords,
+      pendingExportRecords
     );
     const uint8Array = new Uint8Array(excelBuffer);
 

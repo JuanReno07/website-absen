@@ -26,6 +26,7 @@ import {
   ImageIcon,
   Download,
 } from 'lucide-react';
+import { formatIndonesianDateTime } from '@/lib/utils';
 
 interface ReportItem {
   id: string;
@@ -310,10 +311,7 @@ export default function AdminReportsPage() {
                         <tr key={report.id} className="hover:bg-slate-800/60 transition-colors">
                           <td className="px-4 py-4 text-center font-medium text-slate-500">{idx + 1}</td>
                           <td className="px-4 py-4 whitespace-nowrap text-xs text-slate-400">
-                            {new Date(report.created_at).toLocaleString('id-ID', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })}
+                            {formatIndonesianDateTime(report.created_at)}
                           </td>
                           <td className="px-4 py-4">
                             <div className="font-semibold text-white">{report.user.discord_name}</div>
@@ -372,7 +370,7 @@ export default function AdminReportsPage() {
                   <UserIcon className="w-3.5 h-3.5 text-red-400" />
                   <span className="text-slate-200 font-semibold">{selectedReport.user.discord_name}</span>
                   <span>({selectedReport.user.position?.name || 'Anggota'})</span>
-                  <span>• {new Date(selectedReport.created_at).toLocaleString('id-ID')}</span>
+                  <span>• {formatIndonesianDateTime(selectedReport.created_at)}</span>
                 </div>
               </div>
               <button
