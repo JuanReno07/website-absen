@@ -27,6 +27,11 @@ function checkRateLimit(key: string): { allowed: boolean; retryAfterSec: number 
 
 function recordFailedAttempt(key: string) {
   const now = Date.now();
+  if (loginAttempts.size > 2000) {
+    loginAttempts.forEach((val, k) => {
+      if (now > val.resetAt) loginAttempts.delete(k);
+    });
+  }
   const entry = loginAttempts.get(key);
   if (!entry || now > entry.resetAt) {
     loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (username.length > 100 || password.length > 72) {
+    if (username.length > 100 || Buffer.byteLength(password, 'utf8') > 72) {
       return NextResponse.json(
         { error: 'Username atau password yang Anda masukkan salah.' },
         { status: 401 }

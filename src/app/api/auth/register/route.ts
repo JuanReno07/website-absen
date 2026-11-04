@@ -29,9 +29,13 @@ export async function POST(request: Request) {
       );
     }
 
-    if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
+    if (
+      typeof password !== 'string' ||
+      password.length < 8 ||
+      Buffer.byteLength(password, 'utf8') > 72
+    ) {
       return NextResponse.json(
-        { error: 'Password harus terdiri dari 8 hingga 72 karakter.' },
+        { error: 'Password harus terdiri dari 8 hingga 72 byte (UTF-8).' },
         { status: 400 }
       );
     }

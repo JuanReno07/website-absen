@@ -24,14 +24,34 @@ function isSameOriginMutation(request: NextRequest): boolean {
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
     return true;
   }
-  const origin = request.headers.get('origin');
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-  if (!origin || !host) {
-    return true;
+
+  const secFetchSite = request.headers.get('sec-fetch-site');
+  if (secFetchSite && secFetchSite.toLowerCase() === 'cross-site') {
+    return false;
   }
+
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  if (!host) {
+    return false;
+  }
+
+  const allowedHosts = new Set<string>([host.toLowerCase()]);
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    try {
+      allowedHosts.add(new URL(process.env.NEXT_PUBLIC_APP_URL).host.toLowerCase());
+    } catch {
+      // Ignore malformed env URL
+    }
+  }
+
+  const originOrReferer = request.headers.get('origin') || request.headers.get('referer');
+  if (!originOrReferer) {
+    return false;
+  }
+
   try {
-    const originHost = new URL(origin).host;
-    return originHost === host;
+    const sourceHost = new URL(originOrReferer).host.toLowerCase();
+    return allowedHosts.has(sourceHost);
   } catch {
     return false;
   }

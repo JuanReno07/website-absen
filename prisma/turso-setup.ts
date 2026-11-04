@@ -1,15 +1,24 @@
 /**
  * Script to push the Prisma schema to Turso cloud database.
  * Creates all tables defined in schema.prisma and seeds initial data.
- * 
+ *
  * Usage: npx ts-node prisma/turso-setup.ts
  */
 
 import { createClient } from '@libsql/client';
 import bcrypt from 'bcryptjs';
 
-const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL || 'libsql://website-absen-juanreno07.aws-ap-northeast-1.turso.io';
-const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || 'REDACTED_TURSO_AUTH_TOKEN';
+const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL;
+const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN;
+const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD;
+
+if (!TURSO_DATABASE_URL || !TURSO_AUTH_TOKEN) {
+  throw new Error('Set environment variables TURSO_DATABASE_URL and TURSO_AUTH_TOKEN before running turso-setup.ts.');
+}
+
+if (!ADMIN_DEFAULT_PASSWORD || Buffer.byteLength(ADMIN_DEFAULT_PASSWORD, 'utf8') < 8) {
+  throw new Error('Set environment variable ADMIN_DEFAULT_PASSWORD (minimum 8 characters) before running turso-setup.ts.');
+}
 
 const client = createClient({
   url: TURSO_DATABASE_URL,
@@ -18,7 +27,6 @@ const client = createClient({
 
 async function main() {
   console.log('🚀 Connecting to Turso...');
-  console.log(`   URL: ${TURSO_DATABASE_URL}`);
 
   // ==========================================
   // 1. CREATE TABLES (matching schema.prisma)
@@ -51,6 +59,7 @@ async function main() {
       "steam_hex" TEXT NOT NULL,
       "avatar" TEXT,
       "role" TEXT NOT NULL DEFAULT 'MEMBER',
+      "session_version" INTEGER NOT NULL DEFAULT 1,
       "is_active" INTEGER NOT NULL DEFAULT 1,
       "last_login_at" DATETIME,
       "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -157,19 +166,19 @@ async function main() {
   console.log('   ✅ AuditLog table created');
 
   // ==========================================
-  // 2. SEED DATA
+  // 2. SEED INITIAL DATA
   // ==========================================
   console.log('\n🌱 Seeding initial data...');
 
-  // Generate unique IDs
   const genId = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let result = 'c';
-    for (let i = 0; i < 24; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+    let result = 'cm';
+    for (let i = 0; i < 23; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
     return result;
   };
 
-  // Positions
   const positions = [
     { name: 'Chief of Police', description: 'Kepala Kepolisian ASE Roleplay' },
     { name: 'Deputy Chief', description: 'Wakil Kepala Kepolisian' },
@@ -187,26 +196,22 @@ async function main() {
 
   for (const pos of positions) {
     const id = genId();
-    // Use INSERT OR IGNORE to skip if already exists
     await client.execute({
       sql: `INSERT OR IGNORE INTO "Position" ("id", "name", "description", "is_active", "created_at", "updated_at") VALUES (?, ?, ?, 1, datetime('now'), datetime('now'))`,
       args: [id, pos.name, pos.description],
     });
 
-    // Get the actual ID (might be existing)
     const result = await client.execute({
       sql: `SELECT "id" FROM "Position" WHERE "name" = ?`,
       args: [pos.name],
     });
-    positionIds[pos.name] = result.rows[0]?.id as string || id;
+    positionIds[pos.name] = (result.rows[0]?.id as string) || id;
   }
   console.log('   ✅ Positions seeded');
 
-  // Admin User
-  const adminPasswordHash = await bcrypt.hash('REDACTED_ADMIN_PASSWORD', 10);
+  const adminPasswordHash = await bcrypt.hash(ADMIN_DEFAULT_PASSWORD!, 10);
   const adminId = genId();
 
-  // Check if admin already exists
   const existingAdmin = await client.execute({
     sql: `SELECT "id" FROM "User" WHERE "username" = ?`,
     args: ['admin'],
@@ -217,12 +222,11 @@ async function main() {
       sql: `INSERT INTO "User" ("id", "username", "password_hash", "discord_name", "position_id", "ooc_name", "steam_hex", "role", "is_active", "created_at", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))`,
       args: [adminId, 'admin', adminPasswordHash, 'SuperAdmin#0001', positionIds['Chief of Police'], 'Budi Admin', '110000199887766', 'ADMIN'],
     });
-    console.log('   ✅ Admin account created (admin / REDACTED_ADMIN_PASSWORD)');
+    console.log('   ✅ Admin account created');
   } else {
     console.log('   ℹ️  Admin account already exists, skipping');
   }
 
-  // System Settings
   const existingSettings = await client.execute({
     sql: `SELECT "id" FROM "SystemSettings" WHERE "id" = ?`,
     args: ['default'],
@@ -239,12 +243,9 @@ async function main() {
   }
 
   console.log('\n🎉 Turso database setup complete!');
-  console.log('   All tables created and initial data seeded.');
-  console.log('   You can now deploy to Vercel with TURSO_DATABASE_URL and TURSO_AUTH_TOKEN environment variables.');
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Setup failed:', e);
-    process.exit(1);
-  });
+main().catch((e) => {
+  console.error('❌ Setup failed:', e);
+  process.exit(1);
+});

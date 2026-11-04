@@ -67,8 +67,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Seluruh data wajib diisi.' }, { status: 400 });
     }
 
-    if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
-      return NextResponse.json({ error: 'Password harus terdiri dari 8 hingga 72 karakter.' }, { status: 400 });
+    if (
+      typeof password !== 'string' ||
+      password.length < 8 ||
+      Buffer.byteLength(password, 'utf8') > 72
+    ) {
+      return NextResponse.json({ error: 'Password harus terdiri dari 8 hingga 72 byte (UTF-8).' }, { status: 400 });
     }
 
     // Unique Steam Hex check
@@ -142,10 +146,15 @@ export async function PUT(request: Request) {
     if (is_active !== undefined) updateData.is_active = is_active;
 
     if (new_password) {
-      if (typeof new_password !== 'string' || new_password.length < 8 || new_password.length > 72) {
-        return NextResponse.json({ error: 'Password baru harus terdiri dari 8 hingga 72 karakter.' }, { status: 400 });
+      if (
+        typeof new_password !== 'string' ||
+        new_password.length < 8 ||
+        Buffer.byteLength(new_password, 'utf8') > 72
+      ) {
+        return NextResponse.json({ error: 'Password baru harus terdiri dari 8 hingga 72 byte (UTF-8).' }, { status: 400 });
       }
       updateData.password_hash = await bcrypt.hash(new_password, 10);
+      updateData.session_version = { increment: 1 };
     }
 
     const updatedMember = await prisma.user.update({

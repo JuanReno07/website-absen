@@ -33,13 +33,21 @@ export async function PUT(request: Request) {
 
     // Handle password change
     if (new_password) {
-      if (typeof new_password !== 'string' || new_password.length < 8 || new_password.length > 72) {
+      if (
+        typeof new_password !== 'string' ||
+        new_password.length < 8 ||
+        Buffer.byteLength(new_password, 'utf8') > 72
+      ) {
         return NextResponse.json(
-          { error: 'Password baru harus terdiri dari 8 hingga 72 karakter.' },
+          { error: 'Password baru harus terdiri dari 8 hingga 72 byte (UTF-8).' },
           { status: 400 }
         );
       }
-      if (!current_password || typeof current_password !== 'string' || current_password.length > 72) {
+      if (
+        !current_password ||
+        typeof current_password !== 'string' ||
+        Buffer.byteLength(current_password, 'utf8') > 72
+      ) {
         return NextResponse.json(
           { error: 'Masukkan password lama Anda untuk mengubah password.' },
           { status: 400 }
@@ -55,6 +63,7 @@ export async function PUT(request: Request) {
       }
 
       updateData.password_hash = await bcrypt.hash(new_password, 10);
+      updateData.session_version = { increment: 1 };
     }
 
     const updatedUser = await prisma.user.update({
