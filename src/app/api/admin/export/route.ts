@@ -5,6 +5,16 @@ import { generateAttendanceExcel } from '@/lib/excel';
 
 export const dynamic = 'force-dynamic';
 
+function sanitizeSpreadsheetCell(value: string | null | undefined): string {
+  if (!value) return '';
+  const str = String(value);
+  return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+}
+
+function escapeCsvCell(value: string | null | undefined): string {
+  return `"${sanitizeSpreadsheetCell(value).replace(/"/g, '""')}"`;
+}
+
 export async function GET(request: Request) {
   try {
     await requireAdmin();
@@ -123,45 +133,45 @@ export async function GET(request: Request) {
 
     const exportRecords = attendances.map((a) => ({
       id: a.id,
-      discord_name: a.user.discord_name,
-      position_name: a.user.position.name,
-      ooc_name: a.user.ooc_name,
-      steam_hex: a.user.steam_hex,
+      discord_name: sanitizeSpreadsheetCell(a.user.discord_name),
+      position_name: sanitizeSpreadsheetCell(a.user.position.name),
+      ooc_name: sanitizeSpreadsheetCell(a.user.ooc_name),
+      steam_hex: sanitizeSpreadsheetCell(a.user.steam_hex),
       duty_in_time: a.duty_in_time,
       duty_out_time: a.duty_out_time,
       duration_minutes: a.duration_minutes,
       status: a.status,
-      user_note: a.user_note,
-      admin_note: a.admin_note,
+      user_note: a.user_note ? sanitizeSpreadsheetCell(a.user_note) : null,
+      admin_note: a.admin_note ? sanitizeSpreadsheetCell(a.admin_note) : null,
     }));
 
     const pendingExportRecords = pendingManualAttendances.map((a) => ({
       id: a.id,
-      discord_name: a.user.discord_name,
-      position_name: a.user.position.name,
-      ooc_name: a.user.ooc_name,
-      steam_hex: a.user.steam_hex,
+      discord_name: sanitizeSpreadsheetCell(a.user.discord_name),
+      position_name: sanitizeSpreadsheetCell(a.user.position.name),
+      ooc_name: sanitizeSpreadsheetCell(a.user.ooc_name),
+      steam_hex: sanitizeSpreadsheetCell(a.user.steam_hex),
       duty_in_time: a.duty_in_time,
       duty_out_time: a.duty_out_time,
       duration_minutes: a.duration_minutes,
       status: a.status,
-      user_note: a.user_note,
-      admin_note: a.admin_note,
+      user_note: a.user_note ? sanitizeSpreadsheetCell(a.user_note) : null,
+      admin_note: a.admin_note ? sanitizeSpreadsheetCell(a.admin_note) : null,
     }));
 
     const leaveRecords = leaveRequests.map((l) => ({
       id: l.id,
-      discord_name: l.user.discord_name,
-      position_name: l.user.position.name,
-      ooc_name: l.user.ooc_name,
-      steam_hex: l.user.steam_hex,
-      leave_type: l.leave_type,
+      discord_name: sanitizeSpreadsheetCell(l.user.discord_name),
+      position_name: sanitizeSpreadsheetCell(l.user.position.name),
+      ooc_name: sanitizeSpreadsheetCell(l.user.ooc_name),
+      steam_hex: sanitizeSpreadsheetCell(l.user.steam_hex),
+      leave_type: sanitizeSpreadsheetCell(l.leave_type),
       start_date: l.start_date,
       end_date: l.end_date,
-      reason: l.reason,
+      reason: sanitizeSpreadsheetCell(l.reason),
       attachment: l.attachment,
       status: l.status,
-      admin_note: l.admin_note,
+      admin_note: l.admin_note ? sanitizeSpreadsheetCell(l.admin_note) : null,
       approved_by: l.approved_by,
       approved_at: l.approved_at,
       created_at: l.created_at,
@@ -169,15 +179,15 @@ export async function GET(request: Request) {
 
     const reportRecords = userReports.map((r) => ({
       id: r.id,
-      discord_name: r.user.discord_name,
-      position_name: r.user.position.name,
-      ooc_name: r.user.ooc_name,
-      steam_hex: r.user.steam_hex,
-      title: r.title,
-      category: r.category,
-      content: r.content,
+      discord_name: sanitizeSpreadsheetCell(r.user.discord_name),
+      position_name: sanitizeSpreadsheetCell(r.user.position.name),
+      ooc_name: sanitizeSpreadsheetCell(r.user.ooc_name),
+      steam_hex: sanitizeSpreadsheetCell(r.user.steam_hex),
+      title: sanitizeSpreadsheetCell(r.title),
+      category: sanitizeSpreadsheetCell(r.category),
+      content: sanitizeSpreadsheetCell(r.content),
       status: r.status,
-      admin_note: r.admin_note,
+      admin_note: r.admin_note ? sanitizeSpreadsheetCell(r.admin_note) : null,
       reviewed_by: r.reviewed_by,
       reviewed_at: r.reviewed_at,
       created_at: r.created_at,
@@ -200,7 +210,7 @@ export async function GET(request: Request) {
           const key = `${r.discord_name}_${dateStr}`;
           const dayTotalMin = dailyTotals[key] || (r.duration_minutes || 0);
           const targetStatusText = dayTotalMin >= 180 ? 'Terpenuhi' : 'Belum Terpenuhi';
-          return `${idx + 1},"${r.discord_name}","${r.position_name}","${r.ooc_name}","${r.steam_hex}","${r.duty_in_time.toISOString()}","${r.duty_out_time ? r.duty_out_time.toISOString() : ''}",${r.duration_minutes || 0},${dayTotalMin},"${targetStatusText}","${r.status}"`;
+          return `${idx + 1},${escapeCsvCell(r.discord_name)},${escapeCsvCell(r.position_name)},${escapeCsvCell(r.ooc_name)},${escapeCsvCell(r.steam_hex)},"${r.duty_in_time.toISOString()}","${r.duty_out_time ? r.duty_out_time.toISOString() : ''}",${r.duration_minutes || 0},${dayTotalMin},"${targetStatusText}",${escapeCsvCell(r.status)}`;
         })
         .join('\n');
 

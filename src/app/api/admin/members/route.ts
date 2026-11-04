@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getClientIp } from '@/lib/device-parser';
 
 // GET all members
 export async function GET(request: Request) {
@@ -66,6 +67,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Seluruh data wajib diisi.' }, { status: 400 });
     }
 
+    if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
+      return NextResponse.json({ error: 'Password harus terdiri dari 8 hingga 72 karakter.' }, { status: 400 });
+    }
+
     // Unique Steam Hex check
     const existingSteam = await prisma.user.findUnique({ where: { steam_hex: steam_hex.trim() } });
     if (existingSteam) {
@@ -102,10 +107,13 @@ export async function POST(request: Request) {
         table_name: 'users',
         record_id: newUser.id,
         new_data: JSON.stringify({ username, discord_name, role, steam_hex }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 
-    return NextResponse.json({ success: true, member: newUser });
+    const { password_hash: _createdHash, ...safeNewUser } = newUser;
+    return NextResponse.json({ success: true, member: safeNewUser });
   } catch (error: any) {
     console.error('Admin POST member error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
@@ -134,6 +142,9 @@ export async function PUT(request: Request) {
     if (is_active !== undefined) updateData.is_active = is_active;
 
     if (new_password) {
+      if (typeof new_password !== 'string' || new_password.length < 8 || new_password.length > 72) {
+        return NextResponse.json({ error: 'Password baru harus terdiri dari 8 hingga 72 karakter.' }, { status: 400 });
+      }
       updateData.password_hash = await bcrypt.hash(new_password, 10);
     }
 
@@ -142,6 +153,8 @@ export async function PUT(request: Request) {
       data: updateData,
       include: { position: true },
     });
+
+    const { password_hash: _updatedHashInAudit, ...auditSafeUpdateData } = updateData;
 
     // Audit log
     await prisma.auditLog.create({
@@ -155,11 +168,17 @@ export async function PUT(request: Request) {
           role: existingUser.role,
           is_active: existingUser.is_active,
         }),
-        new_data: JSON.stringify(updateData),
+        new_data: JSON.stringify({
+          ...auditSafeUpdateData,
+          ...(new_password ? { password_changed: true } : {}),
+        }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 
-    return NextResponse.json({ success: true, member: updatedMember });
+    const { password_hash: _updatedHash, ...safeUpdatedMember } = updatedMember;
+    return NextResponse.json({ success: true, member: safeUpdatedMember });
   } catch (error: any) {
     console.error('Admin PUT member error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
@@ -187,8 +206,11 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Anggota tidak ditemukan.' }, { status: 404 });
     }
 
-    // Delete related audit logs first (no cascade on this relation)
-    await prisma.auditLog.deleteMany({ where: { admin_id: id } });
+    // Preserve historical audit logs by reassigning ownership to the executing admin
+    await prisma.auditLog.updateMany({
+      where: { admin_id: id },
+      data: { admin_id: admin.id },
+    });
 
     // Delete the user (attendances and leave_requests cascade automatically)
     await prisma.user.delete({ where: { id } });
@@ -207,6 +229,8 @@ export async function DELETE(request: Request) {
           steam_hex: existingUser.steam_hex,
           role: existingUser.role,
         }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getClientIp } from '@/lib/device-parser';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,8 @@ export async function POST(request: Request) {
         table_name: 'positions',
         record_id: position.id,
         new_data: JSON.stringify({ name, description }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 
@@ -74,6 +77,8 @@ export async function PUT(request: Request) {
         table_name: 'positions',
         record_id: id,
         new_data: JSON.stringify({ name, description, is_active }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 
@@ -124,6 +129,8 @@ export async function DELETE(request: Request) {
         table_name: 'positions',
         record_id: id,
         old_data: JSON.stringify({ name: position.name, description: position.description }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 

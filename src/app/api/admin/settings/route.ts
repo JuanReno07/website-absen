@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getClientIp } from '@/lib/device-parser';
+import { isValidImageUpload } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
   try {
+    await requireAdmin();
     const settings = await prisma.systemSettings.findFirst({
       where: { id: 'default' },
     });
@@ -18,7 +21,10 @@ export async function GET() {
         },
       }
     );
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === 'UNAUTHORIZED' || error?.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     return NextResponse.json({ error: 'Failed to load settings' }, { status: 500 });
   }
 }
@@ -41,11 +47,11 @@ export async function PUT(request: Request) {
     } = body;
 
     const updateData: any = {};
-    if (company_name) updateData.company_name = company_name.trim();
-    if (system_name) updateData.system_name = system_name.trim();
-    if (primary_color) updateData.primary_color = primary_color;
-    if (secondary_color) updateData.secondary_color = secondary_color;
-    if (accent_color) updateData.accent_color = accent_color;
+    if (company_name) updateData.company_name = String(company_name).trim().slice(0, 100);
+    if (system_name) updateData.system_name = String(system_name).trim().slice(0, 120);
+    if (primary_color) updateData.primary_color = String(primary_color).trim().slice(0, 20);
+    if (secondary_color) updateData.secondary_color = String(secondary_color).trim().slice(0, 20);
+    if (accent_color) updateData.accent_color = String(accent_color).trim().slice(0, 20);
     if (theme_mode) updateData.theme_mode = theme_mode;
     if (require_duty_in_screenshot !== undefined) updateData.require_duty_in_screenshot = require_duty_in_screenshot;
     if (require_duty_out_screenshot !== undefined) updateData.require_duty_out_screenshot = require_duty_out_screenshot;
@@ -53,6 +59,12 @@ export async function PUT(request: Request) {
 
     // Directly store Data URL for 100% Vercel & Cloud serverless image persistence
     if (logo_base64) {
+      if (!isValidImageUpload(logo_base64, 5)) {
+        return NextResponse.json(
+          { error: 'Format logo tidak valid atau melebihi batas ukuran 5MB.' },
+          { status: 400 }
+        );
+      }
       updateData.logo = logo_base64;
     }
 
@@ -66,13 +78,19 @@ export async function PUT(request: Request) {
     });
 
     // Record Audit Log
+    const { logo: _logoOmit, ...auditUpdateSummary } = updateData;
     await prisma.auditLog.create({
       data: {
         admin_id: admin.id,
         action: 'UPDATE_SYSTEM_SETTINGS',
         table_name: 'system_settings',
         record_id: 'default',
-        new_data: JSON.stringify(updateData),
+        new_data: JSON.stringify({
+          ...auditUpdateSummary,
+          ...(logo_base64 ? { logo_updated: true } : {}),
+        }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 

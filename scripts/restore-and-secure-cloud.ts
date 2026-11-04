@@ -7,6 +7,11 @@ async function restoreAndSecure() {
   console.log('🛡️ Memulai Pemulihan & Amankan Turso Cloud Database...');
 
   try {
+    const newAdminPass = process.env.ADMIN_DEFAULT_PASSWORD;
+    if (!newAdminPass || newAdminPass.length < 8) {
+      throw new Error('Set environment variable ADMIN_DEFAULT_PASSWORD (minimal 8 karakter) sebelum menjalankan skrip ini.');
+    }
+
     // 1. Restore System Settings to clean default state
     const backupFilePath = path.join(process.cwd(), 'backups', 'latest_turso_db_backup.json');
     if (fs.existsSync(backupFilePath)) {
@@ -50,7 +55,6 @@ async function restoreAndSecure() {
     }
 
     // 2. Reset Admin Password & Ensure Admin Account is Active
-    const newAdminPass = 'Prokemas100';
     const passHash = await bcrypt.hash(newAdminPass, 10);
 
     const adminUser = await prisma.user.upsert({

@@ -12,19 +12,25 @@ export interface ParsedDeviceInfo {
 
 export function getClientIp(request: Request): string {
   const headers = request.headers;
-  
+
+  const cfIp = headers.get('cf-connecting-ip');
+  if (cfIp) return cfIp.trim().slice(0, 64);
+
+  const vercelIp = headers.get('x-vercel-forwarded-for');
+  if (vercelIp) {
+    const ips = vercelIp.split(',').map((ip) => ip.trim());
+    if (ips[0]) return ips[0].slice(0, 64);
+  }
+
+  const realIp = headers.get('x-real-ip');
+  if (realIp) return realIp.trim().slice(0, 64);
+
   const xForwardedFor = headers.get('x-forwarded-for');
   if (xForwardedFor) {
     // x-forwarded-for may contain multiple IPs comma-separated, pick the first client IP
     const ips = xForwardedFor.split(',').map((ip) => ip.trim());
-    if (ips[0]) return ips[0];
+    if (ips[0]) return ips[0].slice(0, 64);
   }
-
-  const realIp = headers.get('x-real-ip');
-  if (realIp) return realIp.trim();
-
-  const cfIp = headers.get('cf-connecting-ip');
-  if (cfIp) return cfIp.trim();
 
   return '127.0.0.1';
 }

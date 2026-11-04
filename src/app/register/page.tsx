@@ -19,10 +19,10 @@ export default function RegisterPage() {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    fetch('/api/admin/positions')
+    fetch('/api/public/settings')
       .then((res) => res.json())
       .then((data) => {
-        if (data.positions) {
+        if (Array.isArray(data.positions)) {
           setPositions(data.positions);
           if (data.positions.length > 0) {
             setPositionId(data.positions[0].id);
@@ -39,6 +39,11 @@ export default function RegisterPage() {
 
     if (!username || !password || !discordName || !positionId || !oocName || !steamHex) {
       setErrorMsg('Seluruh kolom formulir pendaftaran wajib diisi.');
+      return;
+    }
+
+    if (password.length < 8 || password.length > 72) {
+      setErrorMsg('Password harus terdiri dari 8 hingga 72 karakter.');
       return;
     }
 
@@ -134,7 +139,7 @@ export default function RegisterPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Buat password unik"
+                placeholder="Minimal 8 karakter"
                 className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:border-brand-500"
               />
             </div>

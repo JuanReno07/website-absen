@@ -6,6 +6,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
 
+  const adminPass = process.env.ADMIN_DEFAULT_PASSWORD;
+  if (!adminPass || adminPass.length < 8) {
+    throw new Error('Set environment variable ADMIN_DEFAULT_PASSWORD (minimal 8 karakter) sebelum menjalankan seed.');
+  }
+
   // 1. Create Default Positions
   const positions = [
     { name: 'Chief of Police', description: 'Kepala Kepolisian ASE Roleplay' },
@@ -33,12 +38,11 @@ async function main() {
 
   console.log('✅ Positions created');
 
-  // Password hashes
-  const adminPasswordHash = await bcrypt.hash('Prokemas100', 10);
-  const userPasswordHash = await bcrypt.hash('password123', 10);
+  // Password hash from environment variable
+  const adminPasswordHash = await bcrypt.hash(adminPass, 10);
 
   // 2. Create Admin Account
-  const adminUser = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { username: 'admin' },
     update: {
       password_hash: adminPasswordHash,
@@ -61,9 +65,9 @@ async function main() {
     },
   });
 
-  console.log('✅ Admin account ready (admin / Prokemas100)');
+  console.log('✅ Admin account ready');
 
-  // 3. Create Initial System Settings with 2nd logo (TRANSPARENT_ASERP_BLACK_SQUARE.png)
+  // 3. Create Initial System Settings
   await prisma.systemSettings.upsert({
     where: { id: 'default' },
     update: {
