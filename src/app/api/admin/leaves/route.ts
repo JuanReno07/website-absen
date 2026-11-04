@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, SAFE_USER_SELECT } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { sendLeaveWebhook } from '@/lib/discord';
+import { getClientIp } from '@/lib/device-parser';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     const leaveRequests = await prisma.leaveRequest.findMany({
       where,
       include: {
-        user: { include: { position: true } },
+        user: { select: SAFE_USER_SELECT },
       },
       orderBy: { created_at: 'desc' },
     });
@@ -86,6 +87,8 @@ export async function PUT(request: Request) {
         record_id: id,
         old_data: JSON.stringify({ status: existing.status }),
         new_data: JSON.stringify({ status, admin_note }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 

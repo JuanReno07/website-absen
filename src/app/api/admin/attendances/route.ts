@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, SAFE_USER_SELECT } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { calculateDurationInMinutes } from '@/lib/utils';
+import { getClientIp } from '@/lib/device-parser';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
       where,
       include: {
         user: {
-          include: { position: true },
+          select: SAFE_USER_SELECT,
         },
       },
       orderBy: { duty_in_time: 'desc' },
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
     const activeDutiesList = await prisma.attendance.findMany({
       where: { status: 'SEDANG_DUTY', deleted_at: null },
       include: {
-        user: { include: { position: true } },
+        user: { select: SAFE_USER_SELECT },
       },
       orderBy: { duty_in_time: 'desc' },
     });
@@ -182,6 +183,8 @@ export async function PUT(request: Request) {
           duration_minutes: existing.duration_minutes,
         }),
         new_data: JSON.stringify(updateData),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 
@@ -231,6 +234,8 @@ export async function DELETE(request: Request) {
           duration_minutes: existing.duration_minutes,
           status: existing.status,
         }),
+        ip_address: getClientIp(request),
+        user_agent: request.headers.get('user-agent') || null,
       },
     });
 

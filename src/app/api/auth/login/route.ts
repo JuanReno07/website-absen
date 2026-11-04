@@ -4,47 +4,98 @@ import { prisma } from '@/lib/db';
 import { signJwt, COOKIE_NAME } from '@/lib/auth';
 import { getClientIp, parseUserAgent } from '@/lib/device-parser';
 
+const LOGIN_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_FAILED_ATTEMPTS = 8;
+const DUMMY_BCRYPT_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string): { allowed: boolean; retryAfterSec: number } {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    return { allowed: true, retryAfterSec: 0 };
+  }
+  if (entry.count >= MAX_FAILED_ATTEMPTS) {
+    return {
+      allowed: false,
+      retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
+    };
+  }
+  return { allowed: true, retryAfterSec: 0 };
+}
+
+function recordFailedAttempt(key: string) {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  } else {
+    entry.count += 1;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { username, password } = body;
 
-    if (!username || !password) {
+    if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
       return NextResponse.json(
         { error: 'Username dan Password wajib diisi.' },
         { status: 400 }
       );
     }
 
+    if (username.length > 100 || password.length > 72) {
+      return NextResponse.json(
+        { error: 'Username atau password yang Anda masukkan salah.' },
+        { status: 401 }
+      );
+    }
+
+    const ipAddress = getClientIp(request);
+    const normalizedUsername = username.trim();
+    const rateKey = `${ipAddress}:${normalizedUsername.toLowerCase()}`;
+
+    const rateStatus = checkRateLimit(rateKey);
+    if (!rateStatus.allowed) {
+      return NextResponse.json(
+        {
+          error: `Terlalu banyak percobaan login gagal. Silakan coba lagi dalam ${rateStatus.retryAfterSec} detik.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const user = await prisma.user.findUnique({
-      where: { username: username.trim() },
+      where: { username: normalizedUsername },
       include: { position: true },
     });
 
-    if (!user) {
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user ? user.password_hash : DUMMY_BCRYPT_HASH
+    );
+
+    if (!user || !isPasswordValid) {
+      recordFailedAttempt(rateKey);
       return NextResponse.json(
-        { error: 'Akun tidak ditemukan. Periksa kembali username Anda.' },
-        { status: 400 }
+        { error: 'Username atau password yang Anda masukkan salah.' },
+        { status: 401 }
       );
     }
 
     if (!user.is_active) {
       return NextResponse.json(
-        { error: 'Akun Anda dinonaktifkan oleh Admin. Silakan hubungi pengurus.' },
+        { error: 'Akun Anda belum aktif atau dinonaktifkan oleh Admin. Silakan hubungi pengurus.' },
         { status: 403 }
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'Password yang Anda masukkan salah.' },
-        { status: 400 }
-      );
-    }
+    loginAttempts.delete(rateKey);
 
-    // Extract Client IP and User Agent Device Info
-    const ipAddress = getClientIp(request);
+    // Extract User Agent Device Info
     const userAgentStr = request.headers.get('user-agent') || '';
     const parsedDevice = parseUserAgent(userAgentStr);
     const tokenId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -107,7 +158,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Login error:', error);
     return NextResponse.json(
-      { error: error?.message ? `Terjadi kesalahan pada server saat login: ${error.message}` : 'Terjadi kesalahan pada server saat login.' },
+      { error: 'Terjadi kesalahan pada server saat login.' },
       { status: 500 }
     );
   }

@@ -2,8 +2,37 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { prisma } from './db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ase_roleplay_emergency_kick_session_token_v4_purge_all_sessions';
+const FALLBACK_DEV_SECRET = 'ase_roleplay_emergency_kick_session_token_v4_purge_all_sessions';
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: JWT_SECRET environment variable must be configured in production.');
+    }
+    return FALLBACK_DEV_SECRET;
+  }
+  return secret;
+}
+
 const COOKIE_NAME = 'ase_duty_session';
+
+export const SAFE_USER_SELECT = {
+  id: true,
+  username: true,
+  discord_name: true,
+  position_id: true,
+  position: true,
+  ooc_name: true,
+  steam_hex: true,
+  avatar: true,
+  role: true,
+  session_version: true,
+  is_active: true,
+  last_login_at: true,
+  created_at: true,
+  updated_at: true,
+} as const;
 
 export interface UserSessionPayload {
   id: string;
@@ -18,12 +47,17 @@ export interface UserSessionPayload {
 }
 
 export function signJwt(payload: UserSessionPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, getJwtSecret(), {
+    algorithm: 'HS256',
+    expiresIn: '7d',
+  });
 }
 
 export function verifyJwt(token: string): UserSessionPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as UserSessionPayload;
+    return jwt.verify(token, getJwtSecret(), {
+      algorithms: ['HS256'],
+    }) as UserSessionPayload;
   } catch (error) {
     return null;
   }

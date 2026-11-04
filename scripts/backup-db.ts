@@ -23,6 +23,11 @@ if (fs.existsSync(envPath)) {
 
 import { prisma } from '../src/lib/db';
 
+function sqlStr(value: string | null | undefined): string {
+  if (value === null || value === undefined) return 'NULL';
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
 async function backupDatabase() {
   console.log('🔄 Memulai Backup Database Turso Cloud ke Local PC...');
   const startTime = Date.now();
@@ -51,7 +56,7 @@ async function backupDatabase() {
     const backupData = {
       timestamp: new Date().toISOString(),
       formatted_date: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
-      database_source: process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || 'Local / Turso DB',
+      database_source: 'Turso / Local SQLite DB',
       stats: {
         total_settings: systemSettings.length,
         total_positions: positions.length,
@@ -96,81 +101,78 @@ async function backupDatabase() {
 
     // Generate SQL Insert Dump
     let sqlDump = `-- DATABASE BACKUP DUMP\n`;
-    sqlDump += `-- Backup Date: ${new Date().toISOString()}\n`;
-    sqlDump += `-- Database Source: ${process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || 'Database'}\n\n`;
+    sqlDump += `-- Backup Date: ${new Date().toISOString()}\n\n`;
 
     // SystemSettings SQL
     systemSettings.forEach((s) => {
-      const bg1 = s.login_background ? `'${s.login_background.replace(/'/g, "''")}'` : "''";
-      const bg2 = s.dashboard_background ? `'${s.dashboard_background.replace(/'/g, "''")}'` : "''";
-      sqlDump += `INSERT OR REPLACE INTO "SystemSettings" ("id", "company_name", "system_name", "logo", "favicon", "login_background", "dashboard_background", "primary_color", "secondary_color", "accent_color", "theme_mode", "require_duty_in_screenshot", "require_duty_out_screenshot", "max_upload_size_mb", "timezone", "system_active", "updated_at") VALUES ('${s.id}', '${s.company_name.replace(/'/g, "''")}', '${s.system_name.replace(/'/g, "''")}', '${s.logo.replace(/'/g, "''")}', '${s.favicon.replace(/'/g, "''")}', ${bg1}, ${bg2}, '${s.primary_color}', '${s.secondary_color}', '${s.accent_color}', '${s.theme_mode}', ${s.require_duty_in_screenshot ? 1 : 0}, ${s.require_duty_out_screenshot ? 1 : 0}, ${s.max_upload_size_mb}, '${s.timezone}', ${s.system_active ? 1 : 0}, '${s.updated_at.toISOString()}');\n`;
+      const bg1 = sqlStr(s.login_background || '');
+      const bg2 = sqlStr(s.dashboard_background || '');
+      sqlDump += `INSERT OR REPLACE INTO "SystemSettings" ("id", "company_name", "system_name", "logo", "favicon", "login_background", "dashboard_background", "primary_color", "secondary_color", "accent_color", "theme_mode", "require_duty_in_screenshot", "require_duty_out_screenshot", "max_upload_size_mb", "timezone", "system_active", "updated_at") VALUES (${sqlStr(s.id)}, ${sqlStr(s.company_name)}, ${sqlStr(s.system_name)}, ${sqlStr(s.logo)}, ${sqlStr(s.favicon)}, ${bg1}, ${bg2}, ${sqlStr(s.primary_color)}, ${sqlStr(s.secondary_color)}, ${sqlStr(s.accent_color)}, ${sqlStr(s.theme_mode)}, ${s.require_duty_in_screenshot ? 1 : 0}, ${s.require_duty_out_screenshot ? 1 : 0}, ${Number(s.max_upload_size_mb) || 10}, ${sqlStr(s.timezone)}, ${s.system_active ? 1 : 0}, ${sqlStr(s.updated_at.toISOString())});\n`;
     });
 
     // Positions SQL
     positions.forEach((p) => {
-      const desc = p.description ? `'${p.description.replace(/'/g, "''")}'` : 'NULL';
-      sqlDump += `INSERT OR REPLACE INTO "Position" ("id", "name", "description", "is_active", "created_at", "updated_at") VALUES ('${p.id}', '${p.name.replace(/'/g, "''")}', ${desc}, ${p.is_active ? 1 : 0}, '${p.created_at.toISOString()}', '${p.updated_at.toISOString()}');\n`;
+      sqlDump += `INSERT OR REPLACE INTO "Position" ("id", "name", "description", "is_active", "created_at", "updated_at") VALUES (${sqlStr(p.id)}, ${sqlStr(p.name)}, ${sqlStr(p.description)}, ${p.is_active ? 1 : 0}, ${sqlStr(p.created_at.toISOString())}, ${sqlStr(p.updated_at.toISOString())});\n`;
     });
 
     // Users SQL
     users.forEach((u) => {
-      const avatar = u.avatar ? `'${u.avatar.replace(/'/g, "''")}'` : 'NULL';
-      const lastLogin = u.last_login_at ? `'${u.last_login_at.toISOString()}'` : 'NULL';
-      const sessionVersion = (u as any).session_version !== undefined ? (u as any).session_version : 1;
-      sqlDump += `INSERT OR REPLACE INTO "User" ("id", "username", "password_hash", "discord_name", "position_id", "ooc_name", "steam_hex", "avatar", "role", "session_version", "is_active", "last_login_at", "created_at", "updated_at") VALUES ('${u.id}', '${u.username.replace(/'/g, "''")}', '${u.password_hash}', '${u.discord_name.replace(/'/g, "''")}', '${u.position_id}', '${u.ooc_name.replace(/'/g, "''")}', '${u.steam_hex}', ${avatar}, '${u.role}', ${sessionVersion}, ${u.is_active ? 1 : 0}, ${lastLogin}, '${u.created_at.toISOString()}', '${u.updated_at.toISOString()}');\n`;
+      const lastLogin = u.last_login_at ? sqlStr(u.last_login_at.toISOString()) : 'NULL';
+      const sessionVersion = Number((u as any).session_version ?? 1);
+      sqlDump += `INSERT OR REPLACE INTO "User" ("id", "username", "password_hash", "discord_name", "position_id", "ooc_name", "steam_hex", "avatar", "role", "session_version", "is_active", "last_login_at", "created_at", "updated_at") VALUES (${sqlStr(u.id)}, ${sqlStr(u.username)}, ${sqlStr(u.password_hash)}, ${sqlStr(u.discord_name)}, ${sqlStr(u.position_id)}, ${sqlStr(u.ooc_name)}, ${sqlStr(u.steam_hex)}, ${sqlStr(u.avatar)}, ${sqlStr(u.role)}, ${sessionVersion}, ${u.is_active ? 1 : 0}, ${lastLogin}, ${sqlStr(u.created_at.toISOString())}, ${sqlStr(u.updated_at.toISOString())});\n`;
     });
 
-    // Attendances SQL
+    // Attendances SQL (Fixed 15 columns = 15 values including deleted_at)
     attendances.forEach((a) => {
-      const outTime = a.duty_out_time ? `'${a.duty_out_time.toISOString()}'` : 'NULL';
-      const dur = a.duration_minutes !== null ? a.duration_minutes : 'NULL';
-      const outSs = a.duty_out_screenshot ? `'${a.duty_out_screenshot.replace(/'/g, "''")}'` : 'NULL';
-      const uNote = a.user_note ? `'${a.user_note.replace(/'/g, "''")}'` : 'NULL';
-      const aNote = a.admin_note ? `'${a.admin_note.replace(/'/g, "''")}'` : 'NULL';
-      const revBy = a.reviewed_by ? `'${a.reviewed_by}'` : 'NULL';
-      const revAt = a.reviewed_at ? `'${a.reviewed_at.toISOString()}'` : 'NULL';
-      const delAt = a.deleted_at ? `'${a.deleted_at.toISOString()}'` : 'NULL';
+      const outTime = a.duty_out_time ? sqlStr(a.duty_out_time.toISOString()) : 'NULL';
+      const dur = a.duration_minutes !== null && a.duration_minutes !== undefined ? Number(a.duration_minutes) : 'NULL';
+      const outSs = sqlStr(a.duty_out_screenshot);
+      const uNote = sqlStr(a.user_note);
+      const aNote = sqlStr(a.admin_note);
+      const revBy = sqlStr(a.reviewed_by);
+      const revAt = a.reviewed_at ? sqlStr(a.reviewed_at.toISOString()) : 'NULL';
+      const delAt = a.deleted_at ? sqlStr(a.deleted_at.toISOString()) : 'NULL';
 
-      sqlDump += `INSERT OR REPLACE INTO "Attendance" ("id", "user_id", "duty_in_time", "duty_out_time", "duration_minutes", "duty_in_screenshot", "duty_out_screenshot", "status", "user_note", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at", "deleted_at") VALUES ('${a.id}', '${a.user_id}', '${a.duty_in_time.toISOString()}', ${outTime}, ${dur}, '${a.duty_in_screenshot.replace(/'/g, "''")}', ${outSs}, '${a.status}', ${uNote}, ${aNote}, ${revBy}, ${revAt}, '${a.created_at.toISOString()}', '${a.updated_at.toISOString()}');\n`;
+      sqlDump += `INSERT OR REPLACE INTO "Attendance" ("id", "user_id", "duty_in_time", "duty_out_time", "duration_minutes", "duty_in_screenshot", "duty_out_screenshot", "status", "user_note", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at", "deleted_at") VALUES (${sqlStr(a.id)}, ${sqlStr(a.user_id)}, ${sqlStr(a.duty_in_time.toISOString())}, ${outTime}, ${dur}, ${sqlStr(a.duty_in_screenshot)}, ${outSs}, ${sqlStr(a.status)}, ${uNote}, ${aNote}, ${revBy}, ${revAt}, ${sqlStr(a.created_at.toISOString())}, ${sqlStr(a.updated_at.toISOString())}, ${delAt});\n`;
     });
 
     // LeaveRequests SQL
     leaveRequests.forEach((l) => {
-      const att = l.attachment ? `'${l.attachment.replace(/'/g, "''")}'` : 'NULL';
-      const aNote = l.admin_note ? `'${l.admin_note.replace(/'/g, "''")}'` : 'NULL';
-      const appBy = l.approved_by ? `'${l.approved_by}'` : 'NULL';
-      const appAt = l.approved_at ? `'${l.approved_at.toISOString()}'` : 'NULL';
+      const att = sqlStr(l.attachment);
+      const aNote = sqlStr(l.admin_note);
+      const appBy = sqlStr(l.approved_by);
+      const appAt = l.approved_at ? sqlStr(l.approved_at.toISOString()) : 'NULL';
 
-      sqlDump += `INSERT OR REPLACE INTO "LeaveRequest" ("id", "user_id", "leave_type", "start_date", "end_date", "reason", "attachment", "status", "admin_note", "approved_by", "approved_at", "created_at", "updated_at") VALUES ('${l.id}', '${l.user_id}', '${l.leave_type}', '${l.start_date.toISOString()}', '${l.end_date.toISOString()}', '${l.reason.replace(/'/g, "''")}', ${att}, '${l.status}', ${aNote}, ${appBy}, ${appAt}, '${l.created_at.toISOString()}', '${l.updated_at.toISOString()}');\n`;
+      sqlDump += `INSERT OR REPLACE INTO "LeaveRequest" ("id", "user_id", "leave_type", "start_date", "end_date", "reason", "attachment", "status", "admin_note", "approved_by", "approved_at", "created_at", "updated_at") VALUES (${sqlStr(l.id)}, ${sqlStr(l.user_id)}, ${sqlStr(l.leave_type)}, ${sqlStr(l.start_date.toISOString())}, ${sqlStr(l.end_date.toISOString())}, ${sqlStr(l.reason)}, ${att}, ${sqlStr(l.status)}, ${aNote}, ${appBy}, ${appAt}, ${sqlStr(l.created_at.toISOString())}, ${sqlStr(l.updated_at.toISOString())});\n`;
     });
 
     // AuditLogs SQL
     auditLogs.forEach((log) => {
-      const oldD = log.old_data ? `'${log.old_data.replace(/'/g, "''")}'` : 'NULL';
-      const newD = log.new_data ? `'${log.new_data.replace(/'/g, "''")}'` : 'NULL';
-      const ip = log.ip_address ? `'${log.ip_address}'` : 'NULL';
-      const ua = log.user_agent ? `'${log.user_agent.replace(/'/g, "''")}'` : 'NULL';
+      const oldD = sqlStr(log.old_data);
+      const newD = sqlStr(log.new_data);
+      const ip = sqlStr(log.ip_address);
+      const ua = sqlStr(log.user_agent);
 
-      sqlDump += `INSERT OR REPLACE INTO "AuditLog" ("id", "admin_id", "action", "table_name", "record_id", "old_data", "new_data", "ip_address", "user_agent", "created_at") VALUES ('${log.id}', '${log.admin_id}', '${log.action}', '${log.table_name}', '${log.record_id}', ${oldD}, ${newD}, ${ip}, ${ua}, '${log.created_at.toISOString()}');\n`;
+      sqlDump += `INSERT OR REPLACE INTO "AuditLog" ("id", "admin_id", "action", "table_name", "record_id", "old_data", "new_data", "ip_address", "user_agent", "created_at") VALUES (${sqlStr(log.id)}, ${sqlStr(log.admin_id)}, ${sqlStr(log.action)}, ${sqlStr(log.table_name)}, ${sqlStr(log.record_id)}, ${oldD}, ${newD}, ${ip}, ${ua}, ${sqlStr(log.created_at.toISOString())});\n`;
     });
 
     // UserReports SQL
     userReports.forEach((r) => {
-      const scr = r.screenshots ? `'${r.screenshots.replace(/'/g, "''")}'` : "'[]'";
-      const aNote = r.admin_note ? `'${r.admin_note.replace(/'/g, "''")}'` : 'NULL';
-      const revBy = r.reviewed_by ? `'${r.reviewed_by}'` : 'NULL';
-      const revAt = r.reviewed_at ? `'${r.reviewed_at.toISOString()}'` : 'NULL';
-      sqlDump += `INSERT OR REPLACE INTO "UserReport" ("id", "user_id", "title", "category", "content", "screenshots", "status", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at") VALUES ('${r.id}', '${r.user_id}', '${r.title.replace(/'/g, "''")}', '${r.category.replace(/'/g, "''")}', '${r.content.replace(/'/g, "''")}', ${scr}, '${r.status}', ${aNote}, ${revBy}, ${revAt}, '${r.created_at.toISOString()}', '${r.updated_at.toISOString()}');\n`;
+      const scr = sqlStr(r.screenshots || '[]');
+      const aNote = sqlStr(r.admin_note);
+      const revBy = sqlStr(r.reviewed_by);
+      const revAt = r.reviewed_at ? sqlStr(r.reviewed_at.toISOString()) : 'NULL';
+      sqlDump += `INSERT OR REPLACE INTO "UserReport" ("id", "user_id", "title", "category", "content", "screenshots", "status", "admin_note", "reviewed_by", "reviewed_at", "created_at", "updated_at") VALUES (${sqlStr(r.id)}, ${sqlStr(r.user_id)}, ${sqlStr(r.title)}, ${sqlStr(r.category)}, ${sqlStr(r.content)}, ${scr}, ${sqlStr(r.status)}, ${aNote}, ${revBy}, ${revAt}, ${sqlStr(r.created_at.toISOString())}, ${sqlStr(r.updated_at.toISOString())});\n`;
     });
 
     // UserSessions SQL
     userSessions.forEach((s) => {
-      const ip = s.ip_address ? `'${s.ip_address}'` : 'NULL';
-      const dt = s.device_type ? `'${s.device_type}'` : 'NULL';
-      const bn = s.browser_name ? `'${s.browser_name}'` : 'NULL';
-      const os = s.os_name ? `'${s.os_name}'` : 'NULL';
-      const ua = s.user_agent ? `'${s.user_agent.replace(/'/g, "''")}'` : 'NULL';
-      sqlDump += `INSERT OR REPLACE INTO "UserSession" ("id", "user_id", "token_id", "ip_address", "device_type", "browser_name", "os_name", "user_agent", "last_active", "is_active", "created_at") VALUES ('${s.id}', '${s.user_id}', '${s.token_id}', ${ip}, ${dt}, ${bn}, ${os}, ${ua}, '${s.last_active.toISOString()}', ${s.is_active ? 1 : 0}, '${s.created_at.toISOString()}');\n`;
+      const ip = sqlStr(s.ip_address);
+      const dt = sqlStr(s.device_type);
+      const bn = sqlStr(s.browser_name);
+      const os = sqlStr(s.os_name);
+      const ua = sqlStr(s.user_agent);
+      sqlDump += `INSERT OR REPLACE INTO "UserSession" ("id", "user_id", "token_id", "ip_address", "device_type", "browser_name", "os_name", "user_agent", "last_active", "is_active", "created_at") VALUES (${sqlStr(s.id)}, ${sqlStr(s.user_id)}, ${sqlStr(s.token_id)}, ${ip}, ${dt}, ${bn}, ${os}, ${ua}, ${sqlStr(s.last_active.toISOString())}, ${s.is_active ? 1 : 0}, ${sqlStr(s.created_at.toISOString())});\n`;
     });
 
     const sqlPath = path.join(backupDir, `db_backup_${timestampStr}.sql`);
@@ -178,16 +180,6 @@ async function backupDatabase() {
 
     fs.writeFileSync(sqlPath, sqlDump, 'utf-8');
     fs.writeFileSync(latestSqlPath, sqlDump, 'utf-8');
-
-    // Also backup .env file safely
-    const envSource = path.join(process.cwd(), '.env');
-    if (fs.existsSync(envSource)) {
-      const envBackupPath = path.join(backupDir, `env_backup_${timestampStr}.txt`);
-      const latestEnvPath = path.join(backupDir, `env_backup.txt`);
-      fs.copyFileSync(envSource, envBackupPath);
-      fs.copyFileSync(envSource, latestEnvPath);
-      console.log('🔐 File .env berhasil diamankan ke folder backups.');
-    }
 
     // Also backup public/uploads if exists
     const uploadsSource = path.join(process.cwd(), 'public', 'uploads');
@@ -211,18 +203,7 @@ async function backupDatabase() {
     console.log(`📂 Folder Lokasi Backup: ${backupDir}`);
     console.log(`📄 File JSON Backup : ${jsonPath}`);
     console.log(`📄 File SQL Backup  : ${sqlPath}`);
-    console.log(`----------------------------------------------------`);
-    console.log(`📊 RINGKASAN DATA TER-BACKUP:`);
-    console.log(`   • System Settings : ${systemSettings.length} konfigurasi`);
-    console.log(`   • Positions/Jabatan: ${positions.length} data`);
-    console.log(`   • Users/Anggota   : ${users.length} akun`);
-    console.log(`   • Attendances/Absen: ${attendances.length} sesi`);
-    console.log(`   • Leave Requests   : ${leaveRequests.length} pengajuan`);
-    console.log(`   • Reports/Laporan  : ${userReports.length} laporan`);
-    console.log(`   • Active Sessions  : ${userSessions.length} sesi login`);
-    console.log(`   • Audit Logs       : ${auditLogs.length} rekam jejak`);
     console.log('====================================================');
-
   } catch (error) {
     console.error('❌ Gagal melakukan backup database:', error);
     process.exit(1);

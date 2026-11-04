@@ -1,9 +1,24 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
+import { getClientIp } from '@/lib/device-parser';
+
+const REGISTER_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_REGISTER_ATTEMPTS_PER_IP = 5;
+const registerAttempts = new Map<string, { count: number; resetAt: number }>();
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const now = Date.now();
+    const rateEntry = registerAttempts.get(ip);
+    if (rateEntry && now <= rateEntry.resetAt && rateEntry.count >= MAX_REGISTER_ATTEMPTS_PER_IP) {
+      return NextResponse.json(
+        { error: 'Terlalu banyak permintaan registrasi. Silakan coba lagi beberapa saat kemudian.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { username, password, discord_name, position_id, ooc_name, steam_hex } = body;
 
@@ -14,9 +29,27 @@ export async function POST(request: Request) {
       );
     }
 
+    if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
+      return NextResponse.json(
+        { error: 'Password harus terdiri dari 8 hingga 72 karakter.' },
+        { status: 400 }
+      );
+    }
+
+    // Verify position exists
+    const position = await prisma.position.findUnique({
+      where: { id: String(position_id).trim() },
+    });
+    if (!position || !position.is_active) {
+      return NextResponse.json(
+        { error: 'Jabatan yang dipilih tidak valid atau tidak aktif.' },
+        { status: 400 }
+      );
+    }
+
     // Check unique Steam Hex
     const existingSteam = await prisma.user.findUnique({
-      where: { steam_hex: steam_hex.trim() },
+      where: { steam_hex: String(steam_hex).trim() },
     });
     if (existingSteam) {
       return NextResponse.json(
@@ -27,7 +60,7 @@ export async function POST(request: Request) {
 
     // Check unique Username
     const existingUsername = await prisma.user.findUnique({
-      where: { username: username.trim() },
+      where: { username: String(username).trim() },
     });
     if (existingUsername) {
       return NextResponse.json(
@@ -40,16 +73,22 @@ export async function POST(request: Request) {
 
     const newUser = await prisma.user.create({
       data: {
-        username: username.trim(),
+        username: String(username).trim().slice(0, 50),
         password_hash: passwordHash,
-        discord_name: discord_name.trim(),
-        position_id: position_id,
-        ooc_name: ooc_name.trim(),
-        steam_hex: steam_hex.trim(),
+        discord_name: String(discord_name).trim().slice(0, 80),
+        position_id: String(position_id).trim(),
+        ooc_name: String(ooc_name).trim().slice(0, 80),
+        steam_hex: String(steam_hex).trim().slice(0, 50),
         role: 'MEMBER',
         is_active: false, // Requires Admin Activation
       },
     });
+
+    if (!rateEntry || now > rateEntry.resetAt) {
+      registerAttempts.set(ip, { count: 1, resetAt: now + REGISTER_WINDOW_MS });
+    } else {
+      rateEntry.count += 1;
+    }
 
     return NextResponse.json({
       success: true,

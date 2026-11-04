@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { sendReportWebhook } from '@/lib/discord';
+import { isValidImageUpload } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,11 +45,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Minimal 1 foto screenshot bukti wajib diunggah.' }, { status: 400 });
     }
 
-    // Filter valid non-empty base64 screenshots
-    const validScreenshots = screenshots.filter((s: string) => typeof s === 'string' && s.trim().length > 0);
+    // Filter valid non-empty base64 screenshots (max 10 screenshots per report)
+    const validScreenshots = screenshots
+      .slice(0, 10)
+      .filter((s: string) => typeof s === 'string' && isValidImageUpload(s, 10));
 
     if (validScreenshots.length === 0) {
-      return NextResponse.json({ error: 'Foto screenshot bukti tidak valid.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Foto screenshot bukti tidak valid atau melebihi batas ukuran.' },
+        { status: 400 }
+      );
     }
 
     const newReport = await prisma.userReport.create({

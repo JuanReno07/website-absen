@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isValidImageUpload } from '@/lib/storage';
 
 export async function PUT(request: Request) {
   try {
@@ -15,13 +16,30 @@ export async function PUT(request: Request) {
 
     const updateData: any = {};
 
-    if (discord_name) updateData.discord_name = discord_name.trim();
-    if (ooc_name) updateData.ooc_name = ooc_name.trim();
-    if (avatar !== undefined) updateData.avatar = avatar;
+    if (discord_name) updateData.discord_name = String(discord_name).trim().slice(0, 80);
+    if (ooc_name) updateData.ooc_name = String(ooc_name).trim().slice(0, 80);
+    if (avatar !== undefined) {
+      if (avatar === null || avatar === '') {
+        updateData.avatar = null;
+      } else if (typeof avatar === 'string' && isValidImageUpload(avatar, 5)) {
+        updateData.avatar = avatar;
+      } else {
+        return NextResponse.json(
+          { error: 'Format foto profil tidak valid atau ukuran terlalu besar.' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Handle password change
     if (new_password) {
-      if (!current_password) {
+      if (typeof new_password !== 'string' || new_password.length < 8 || new_password.length > 72) {
+        return NextResponse.json(
+          { error: 'Password baru harus terdiri dari 8 hingga 72 karakter.' },
+          { status: 400 }
+        );
+      }
+      if (!current_password || typeof current_password !== 'string' || current_password.length > 72) {
         return NextResponse.json(
           { error: 'Masukkan password lama Anda untuk mengubah password.' },
           { status: 400 }

@@ -36,8 +36,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local database backups
+# local database backups & user uploads
 /backups/*
 !/backups/.gitkeep
+/public/uploads/*
+!/public/uploads/.gitkeep
 *.sqlite
 *.db

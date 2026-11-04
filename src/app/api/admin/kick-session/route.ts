@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { getClientIp } from '@/lib/device-parser';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
     const adminUser = await requireAdmin();
     const body = await request.json();
     const { userId, sessionId, kickAll } = body;
+    const clientIp = getClientIp(request);
+    const userAgent = request.headers.get('user-agent') || null;
 
     // 1. Kick All Active Sessions (Purge All)
     if (kickAll) {
@@ -83,6 +86,8 @@ export async function POST(request: Request) {
             message: 'Seluruh sesi user di-kick dari sistem dan duty aktif dihentikan otomatis.',
             affected_active_duties: activeDuties.length,
           }),
+          ip_address: clientIp,
+          user_agent: userAgent,
         },
       });
 
@@ -126,6 +131,8 @@ export async function POST(request: Request) {
             os: dbSession.os_name,
             had_active_duty: hadDuty,
           }),
+          ip_address: clientIp,
+          user_agent: userAgent,
         },
       });
 
@@ -174,6 +181,8 @@ export async function POST(request: Request) {
           target_username: targetUser.username,
           had_active_duty: hadDuty,
         }),
+        ip_address: clientIp,
+        user_agent: userAgent,
       },
     });
 

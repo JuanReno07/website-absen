@@ -1,16 +1,15 @@
 /**
  * Helper to determine if a given user is "ASE Juan" (exclusive privilege).
+ * Uses immutable database ID and verified ADMIN role rather than user-editable discord_name substrings.
  */
-export function isJuanUser(user: { id?: string; username?: string; discord_name?: string } | null | undefined): boolean {
+export function isJuanUser(
+  user: { id?: string; username?: string; discord_name?: string; role?: string } | null | undefined
+): boolean {
   if (!user) return false;
-  const dName = (user.discord_name || '').toLowerCase().replace(/[\s\-_]/g, '');
   const uName = (user.username || '').toLowerCase();
-  
+
   return (
     user.id === 'cmrx0bhj0000b6rhazm2sfmvz' ||
-    dName === 'asejuan' ||
-    dName.includes('asejuan') ||
-    (uName === 'admin' && dName.includes('juan')) ||
-    (user.discord_name || '').toLowerCase().includes('juan')
+    (user.role === 'ADMIN' && uName === 'admin')
   );
 }
