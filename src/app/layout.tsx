@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import ThemeScript from '@/components/ThemeScript';
 import { prisma } from '@/lib/db';
+import { Analytics } from '@vercel/analytics/next';
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = 'ASE Duty Attendance System';
@@ -82,6 +83,7 @@ export default async function RootLayout({
           themeMode={settings?.theme_mode}
         />
         <div className="flex-1 flex flex-col">{children}</div>
+        <Analytics />
       </body>
     </html>
   );
