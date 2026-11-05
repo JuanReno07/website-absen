@@ -51,6 +51,8 @@ export async function GET() {
 
   if (!user) {
     const response = NextResponse.json({ authenticated: false, settings }, { status: 200 });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
     // Clear stale or invalid session cookie automatically
     response.cookies.set(COOKIE_NAME, '', {
       httpOnly: true,
@@ -61,7 +63,7 @@ export async function GET() {
     return response;
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     authenticated: true,
     user: {
       id: user.id,
@@ -76,4 +78,7 @@ export async function GET() {
     },
     settings,
   });
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  return response;
 }
