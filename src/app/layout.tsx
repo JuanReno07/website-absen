@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import ThemeScript from '@/components/ThemeScript';
 import { prisma } from '@/lib/db';
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  display: 'swap',
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = 'ASE Duty Attendance System';
@@ -51,13 +58,7 @@ export default async function RootLayout({
   return (
     <html lang="id">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="icon" href="/Logo/TRANSPARENT_ASERP_BLACK_SQUARE.png" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -74,7 +75,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased selection:bg-brand-500 selection:text-white flex flex-col min-h-screen">
+      <body className={`${inter.className} antialiased selection:bg-brand-500 selection:text-white flex flex-col min-h-screen`}>
         <ThemeScript
           primaryColor={settings?.primary_color}
           secondaryColor={settings?.secondary_color}
